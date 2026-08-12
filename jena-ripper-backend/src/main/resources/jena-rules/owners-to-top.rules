@@ -1,0 +1,264 @@
+@prefix cim: <http://iec.ch/TC57/CIM100#>.
+@prefix ups: <https://cim.so-ups.ru#>.
+@prefix so: <http://so-ups.ru/2015/schema-cim16#>.
+@prefix me: <http://monitel.com/2014/schema-cim16#>.
+@prefix rf: <http://gost.ru/2019/schema-cim01#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+#################################################################################################################
+# 2 С‡Р°СЃС‚СЊ: РґР»СЏ РѕР±СЉРµРєС‚РѕРІ, РєРѕС‚РѕСЂС‹РјРё СЃСѓР±СЉРµРєС‚ Р­Р­ РЅРµ РІР»Р°РґРµРµС‚, РЅРѕ РЅРёР¶Рµ РїРѕ РґРµСЂРµРІСѓ РµСЃС‚СЊ РѕР±СЉРµРєС‚С‹, РєРѕС‚РѕСЂС‹РјРё РѕРЅ РІР»Р°РґРµРµС‚
+#################################################################################################################
+
+# РЇС‡РµР№РєР° (Bay): OrganisationRole РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ СЏС‡РµР№РєРё
+[r500:
+	  (?bay so:Object.OwnersToTop ?organisation) <-
+	  (?bay rdf:type cim:Bay)
+	  (?bay cim:EquipmentContainer.Equipments ?eq)
+	  (?eq rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?bay so:Object.OwnersToBottom ?organisation)
+      noValue(?bay so:Object.OwnersToTop ?organisation)
+      noValue(?bay so:Object.DataSourceToBottom  ?organisation)
+      noValue(?bay so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р РЈ (VoltageLevel): OrganisationRole СЏС‡РµРµРє
+[r501:
+	  (?vl so:Object.OwnersToTop ?organisation) <-
+	  (?vl cim:VoltageLevel.Bays ?bay)
+	  (?bay rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?vl so:Object.OwnersToBottom ?organisation)
+      noValue(?vl so:Object.OwnersToTop ?organisation)
+      noValue(?vl so:Object.DataSourceToBottom  ?organisation)
+      noValue(?vl so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р РЈ (VoltageLevel): OwnersToTop СЏС‡РµРµРє
+[r502:
+	  (?vl so:Object.OwnersToTop ?organisation) <-
+	  (?vl cim:VoltageLevel.Bays ?bay)
+	  (?bay so:Object.OwnersToTop ?organisation)
+	  noValue(?vl so:Object.OwnersToBottom ?organisation)
+      noValue(?vl so:Object.OwnersToTop ?organisation)
+      noValue(?vl so:Object.DataSourceToBottom  ?organisation)
+      noValue(?vl so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р РЈ (VoltageLevel): OrganisationRole РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ Р РЈ
+[r503:
+	  (?vl so:Object.OwnersToTop ?organisation) <-
+	  (?vl rdf:type cim:VoltageLevel)
+	  (?vl cim:EquipmentContainer.Equipments ?eq)
+	  (?eq rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?vl so:Object.OwnersToBottom ?organisation)
+      noValue(?vl so:Object.OwnersToTop ?organisation)
+      noValue(?vl so:Object.DataSourceToBottom  ?organisation)
+      noValue(?vl so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р РЈ (VoltageLevel): OwnersToTop РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ Р РЈ
+[r504:
+	  (?vl so:Object.OwnersToTop ?organisation) <-
+	  (?vl rdf:type cim:VoltageLevel)
+	  (?vl cim:EquipmentContainer.Equipments ?eq)
+	  (?eq so:Object.OwnersToTop ?organisation)
+	  noValue(?vl so:Object.OwnersToBottom ?organisation)
+      noValue(?vl so:Object.OwnersToTop ?organisation)
+      noValue(?vl so:Object.DataSourceToBottom  ?organisation)
+      noValue(?vl so:Object.DataSourceToTop  ?organisation)
+]
+
+# РџРѕРґСЃС‚Р°РЅС†РёСЏ (Substation): OrganisationRole Р РЈ
+[r505:
+	  (?subs so:Object.OwnersToTop ?organisation) <-
+	  (?subs cim:Substation.VoltageLevels ?vl)
+	  (?vl rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?subs so:Object.OwnersToBottom ?organisation)
+      noValue(?subs so:Object.OwnersToTop ?organisation)
+      noValue(?subs so:Object.DataSourceToBottom  ?organisation)
+      noValue(?subs so:Object.DataSourceToTop  ?organisation)
+]
+
+# РџРѕРґСЃС‚Р°РЅС†РёСЏ (Substation): OwnersToTop Р РЈ
+[r506:
+	  (?subs so:Object.OwnersToTop ?organisation) <-
+	  (?subs cim:Substation.VoltageLevels ?vl)
+	  (?vl so:Object.OwnersToTop ?organisation)
+	  noValue(?subs so:Object.OwnersToBottom ?organisation)
+      noValue(?subs so:Object.OwnersToTop ?organisation)
+      noValue(?subs so:Object.DataSourceToBottom  ?organisation)
+      noValue(?subs so:Object.DataSourceToTop  ?organisation)
+]
+
+# РџРѕРґСЃС‚Р°РЅС†РёСЏ (Substation): OrganisationRole РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ РїРѕРґСЃС‚Р°РЅС†РёРё
+[r507:
+	  (?subs so:Object.OwnersToTop ?organisation) <-
+	  (?subs rdf:type cim:Substation)
+	  (?subs cim:EquipmentContainer.Equipments ?eq)
+	  (?eq rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?subs so:Object.OwnersToBottom ?organisation)
+      noValue(?subs so:Object.OwnersToTop ?organisation)
+      noValue(?subs so:Object.DataSourceToBottom  ?organisation)
+      noValue(?subs so:Object.DataSourceToTop  ?organisation)
+]
+
+# РџРѕРґСЃС‚Р°РЅС†РёСЏ (Substation): OwnersToTop РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ РїРѕРґСЃС‚Р°РЅС†РёРё
+[r508:
+	  (?subs so:Object.OwnersToTop ?organisation) <-
+	  (?subs rdf:type cim:Substation)
+	  (?subs cim:EquipmentContainer.Equipments ?eq)
+	  (?eq so:Object.OwnersToTop ?organisation)
+	  noValue(?subs so:Object.OwnersToBottom ?organisation)
+      noValue(?subs so:Object.OwnersToTop ?organisation)
+      noValue(?subs so:Object.DataSourceToBottom  ?organisation)
+      noValue(?subs so:Object.DataSourceToTop  ?organisation)
+]
+
+# РЎРёРЅС…СЂРѕРЅРЅР°СЏ РјР°С€РёРЅР° (SynchronousMachine): OrganisationRole С‚СѓСЂР±РёРЅС‹
+[r509:
+	  (?sm so:Object.OwnersToTop ?organisation) <-
+	  (?sm cim:SynchronousMachine.PrimeMovers ?turbine)
+	  (?turbine rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?sm so:Object.OwnersToBottom ?organisation)
+      noValue(?sm so:Object.OwnersToTop ?organisation)
+      noValue(?sm so:Object.DataSourceToBottom  ?organisation)
+      noValue(?sm so:Object.DataSourceToTop  ?organisation)
+]
+
+# РђСЃРёРЅС…СЂРѕРЅРЅР°СЏ РјР°С€РёРЅР° (AsynchronousMachine): OrganisationRole С‚СѓСЂР±РёРЅС‹
+[r510:
+	  (?am so:Object.OwnersToTop ?organisation) <-
+	  (?am rf:AsynchronousMachine.PrimeMover ?turbine)
+	  (?turbine rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?am so:Object.OwnersToBottom ?organisation)
+      noValue(?am so:Object.OwnersToTop ?organisation)
+      noValue(?am so:Object.DataSourceToBottom  ?organisation)
+      noValue(?am so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р­РЅРµСЂРіРѕР±Р»РѕРє (GeneratingUnit): OrganisationRole РіРµРЅРµСЂР°С‚РѕСЂР°
+[r511:
+	  (?gUnit so:Object.OwnersToTop ?organisation) <-
+	  (?gUnit cim:GeneratingUnit.RotatingMachine ?rm)
+	  (?rm rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?gUnit so:Object.OwnersToBottom ?organisation)
+      noValue(?gUnit so:Object.OwnersToTop ?organisation)
+      noValue(?gUnit so:Object.DataSourceToBottom  ?organisation)
+      noValue(?gUnit so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р­РЅРµСЂРіРѕР±Р»РѕРє (GeneratingUnit): OwnersToTop РіРµРЅРµСЂР°С‚РѕСЂР°
+[r512:
+	  (?gUnit so:Object.OwnersToTop ?organisation) <-
+	  (?gUnit cim:GeneratingUnit.RotatingMachine ?rm)
+	  (?rm so:Object.OwnersToTop ?organisation)
+	  noValue(?gUnit so:Object.OwnersToBottom ?organisation)
+      noValue(?gUnit so:Object.OwnersToTop ?organisation)
+      noValue(?gUnit so:Object.DataSourceToBottom  ?organisation)
+      noValue(?gUnit so:Object.DataSourceToTop  ?organisation)
+]
+
+# РЎС‚Р°РЅС†РёСЏ (Plant): OrganisationRole РїРѕРґСЃС‚Р°РЅС†РёРё
+[r513:
+	  (?plant so:Object.OwnersToTop ?organisation) <-
+	  (?plant rf:Plant.Substations ?subs)
+	  (?subs rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?plant so:Object.OwnersToBottom ?organisation)
+      noValue(?plant so:Object.OwnersToTop ?organisation)
+      noValue(?plant so:Object.DataSourceToBottom  ?organisation)
+      noValue(?plant so:Object.DataSourceToTop  ?organisation)
+]
+
+# РЎС‚Р°РЅС†РёСЏ (Plant): OwnersToTop РїРѕРґСЃС‚Р°РЅС†РёРё
+[r514:
+	  (?plant so:Object.OwnersToTop ?organisation) <-
+	  (?plant rf:Plant.Substations ?subs)
+	  (?subs so:Object.OwnersToTop ?organisation)
+	  noValue(?plant so:Object.OwnersToBottom ?organisation)
+      noValue(?plant so:Object.OwnersToTop ?organisation)
+      noValue(?plant so:Object.DataSourceToBottom  ?organisation)
+      noValue(?plant so:Object.DataSourceToTop  ?organisation)
+]
+
+# РЎС‚Р°РЅС†РёСЏ (Plant): OrganisationRole РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ СЃС‚Р°РЅС†РёРё
+[r515:
+	  (?plant so:Object.OwnersToTop ?organisation) <-
+	  (?plant rdf:type cim:Plant)
+	  (?plant cim:EquipmentContainer.Equipments ?eq)
+	  (?eq rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?plant so:Object.OwnersToBottom ?organisation)
+      noValue(?plant so:Object.OwnersToTop ?organisation)
+      noValue(?plant so:Object.DataSourceToBottom  ?organisation)
+      noValue(?plant so:Object.DataSourceToTop  ?organisation)
+]
+
+# РЎС‚Р°РЅС†РёСЏ (Plant): OwnersToTop РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ СЃС‚Р°РЅС†РёРё
+[r516:
+	  (?plant so:Object.OwnersToTop ?organisation) <-
+	  (?plant rdf:type cim:Plant)
+	  (?plant cim:EquipmentContainer.Equipments ?eq)
+	  (?eq so:Object.OwnersToTop ?organisation)
+	  noValue(?plant so:Object.OwnersToBottom ?organisation)
+      noValue(?plant so:Object.OwnersToTop ?organisation)
+      noValue(?plant so:Object.DataSourceToBottom  ?organisation)
+      noValue(?plant so:Object.DataSourceToTop  ?organisation)
+]
+
+# РЈС‡Р°СЃС‚РѕРє Р›Р­Рџ (ACLineSegment): OrganisationRole СЃРѕСЃС‚Р°РІРЅС‹С… С‡Р°СЃС‚РµР№ СѓС‡Р°СЃС‚РєР° Р›Р­Рџ
+[r517:
+	  (?segment so:Object.OwnersToTop ?organisation) <-
+	  (?segment rf:ACLineSegment.ACLineSeriesSections ?section)
+	  (?section rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?segment so:Object.OwnersToBottom ?organisation)
+      noValue(?segment so:Object.OwnersToTop ?organisation)
+      noValue(?segment so:Object.DataSourceToBottom  ?organisation)
+      noValue(?segment so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р›Р­Рџ (Line): OrganisationRole РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ Р»РёРЅРёРё
+[r518:
+	  (?line so:Object.OwnersToTop ?organisation) <-
+	  (?line rdf:type cim:Line)
+	  (?line cim:EquipmentContainer.Equipments ?eq)
+	  (?eq rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	  (?orgRoles rdf:type cim:AssetOwner)
+	  (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+	  noValue(?line so:Object.OwnersToBottom ?organisation)
+      noValue(?line so:Object.OwnersToTop ?organisation)
+      noValue(?line so:Object.DataSourceToBottom  ?organisation)
+      noValue(?line so:Object.DataSourceToTop  ?organisation)
+]
+
+# Р›Р­Рџ (Line): OwnersToTop РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ Р»РёРЅРёРё
+[r519:
+	  (?line so:Object.OwnersToTop ?organisation) <-
+	  (?line rdf:type cim:Line)
+	  (?line cim:EquipmentContainer.Equipments ?eq)
+	  (?eq so:Object.OwnersToTop ?organisation)
+	  noValue(?line so:Object.OwnersToBottom ?organisation)
+      noValue(?line so:Object.OwnersToTop ?organisation)
+      noValue(?line so:Object.DataSourceToBottom  ?organisation)
+      noValue(?line so:Object.DataSourceToTop  ?organisation)
+]
+

@@ -1,0 +1,16 @@
+@prefix cim: <http://iec.ch/TC57/CIM100#>.
+@prefix ups: <https://cim.so-ups.ru#>.
+@prefix so: <http://so-ups.ru/2015/schema-cim16#>.
+@prefix me: <http://monitel.com/2014/schema-cim16#>.
+@prefix rf: <http://gost.ru/2019/schema-cim01#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+
+
+[r001:
+	 (?obj so:Object.DataSourceToBottom ?organisation) <-
+	 (?obj rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+	 (?orgRoles rdf:type so:AssetDataSource)
+	 (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+]
+

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Интерактивный исследователь RDF-графов Apache Jena" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <title>Jena Ripper</title>
+  </head>
+  <body>
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <img class="brand-icon" src="/src/assets/jena-ripper-light-logo.svg" alt="" width="64" height="64" />
+        </span>
+        <div class="brand-copy">
+          <strong>Jena Ripper</strong>
+          <span>Исследователь RDF-графов Apache Jena</span>
+        </div>
+      </div>
+      <nav class="mode-tabs" aria-label="Режим приложения">
+        <button id="graph-mode-button" class="mode-tab active" type="button">Graph</button>
+        <button id="sparql-mode-button" class="mode-tab" type="button">SPARQL</button>
+        <button id="redis-mode-button" class="mode-tab" type="button">Redis</button>
+      </nav>
+      <form id="search-form" class="search">
+        <input id="search-input" type="search" autocomplete="off" placeholder="Поиск по имени, URI, UUID или классу" aria-label="Поиск RDF-ресурсов" />
+        <button type="submit">Найти</button>
+        <div id="search-results" class="search-results" hidden></div>
+      </form>
+      <div class="actions">
+        <span id="header-status" class="status status--pending"><i></i> Проверка Dataset</span>
+        <button id="clear-button" type="button" disabled>Очистить</button>
+        <button id="reset-button" type="button">Новый граф</button>
+        <button id="settings-button" class="settings-button" type="button" aria-label="Настройки" title="Настройки">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.36.7.66.96.3.26.68.4 1.08.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.64Z"/></svg>
+        </button>
+        <button id="shutdown-button" class="settings-button shutdown-button" type="button" aria-label="Выключить Jena Ripper" title="Выключить Jena Ripper" hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2v10"/><path d="M6.4 5.7a9 9 0 1 0 11.2 0"/></svg>
+        </button>
+      </div>
+    </header>
+    <main>
+      <section id="graph-mode" class="mode-screen">
+        <section id="welcome" class="welcome">
+          <img class="welcome-logo" src="/src/assets/jena-ripper-approved.png" alt="Jena Ripper" width="320" />
+          <h1>Исследуйте RDF-граф визуально</h1>
+          <p>Введите URI, compact URI, UUID или найдите объект по имени.</p>
+          <form id="start-form">
+            <input id="start-uri" type="text" required placeholder="ups:_6de77a5d… или UUID" />
+            <button type="submit">Построить граф</button>
+          </form>
+          <p class="slogan">Rip your RDF graph apart.</p>
+        </section>
+        <div id="graph" class="graph" hidden></div>
+        <aside id="details" class="details" hidden></aside>
+        <div id="message" class="message" role="status" hidden></div>
+      </section>
+      <section id="sparql-mode" class="mode-screen sparql-console" hidden>
+        <div class="sparql-workspace">
+          <aside class="sparql-sidebar">
+            <div class="sparql-side-heading"><h2>SPARQL</h2><span>READ only</span></div>
+            <div class="sparql-side-tabs">
+              <button class="active" type="button" data-sparql-side="templates">Шаблоны</button>
+              <button type="button" data-sparql-side="history">История</button>
+            </div>
+            <div data-side-panel="templates">
+              <div class="history-heading"><h3>Системные</h3></div>
+              <div id="sparql-system-templates" class="template-list"></div>
+              <div class="history-heading"><h3>Мои</h3></div>
+              <div id="sparql-user-templates" class="template-list"></div>
+            </div>
+            <div data-side-panel="history" hidden>
+              <div class="history-heading"><h3>Последние 20</h3><button id="sparql-history-clear" type="button">Очистить</button></div>
+              <div id="sparql-history" class="sparql-history"></div>
+            </div>
+          </aside>
+          <div class="sparql-main">
+            <section class="sparql-editor-panel">
+              <div class="sparql-panel-heading">
+                <div><h1>SPARQL Console</h1><p>Запросы выполняются к текущему Apache Jena Dataset.</p></div>
+                <span class="read-only-badge">SELECT · ASK · CONSTRUCT · DESCRIBE</span>
+              </div>
+              <div id="sparql-editor" class="sparql-editor" aria-label="SPARQL editor"></div>
+              <div class="sparql-toolbar">
+                <button id="sparql-run" type="button"><span aria-hidden="true">▶</span> Выполнить</button>
+                <button id="sparql-cancel" class="cancel-query" type="button" hidden>■ Отменить</button>
+                <button id="sparql-analyze" class="secondary-toolbar" type="button">Анализировать</button>
+                <label id="sparql-owner-rules-option" class="sparql-owner-rules" hidden>
+                  <input id="sparql-owner-rules" type="checkbox">
+                  <span class="sparql-owner-rules-switch" aria-hidden="true"></span>
+                  <span>Использовать правила</span>
+                </label>
+                <button id="sparql-save-template" class="secondary-toolbar" type="button">Сохранить как шаблон</button>
+                <span id="sparql-running-hint" class="sparql-running-hint" aria-live="polite"></span>
+                <details id="sparql-more" class="sparql-more">
+                  <summary aria-label="Дополнительные действия">⋯</summary>
+                  <div><button id="sparql-benchmark" type="button">Benchmark</button></div>
+                </details>
+                <span class="shortcut-hint">Ctrl + Enter</span>
+              </div>
+              <div id="sparql-error" class="sparql-error" hidden></div>
+            </section>
+            <section class="sparql-result-panel">
+              <div class="sparql-result-heading">
+                <div class="result-tabs">
+                  <button class="active" type="button" data-result-tab="result">Результат</button>
+                  <button type="button" data-result-tab="analysis">Анализ</button>
+                  <button type="button" data-result-tab="algebra">Алгебра</button>
+                </div>
+                <div id="sparql-result-meta" class="sparql-result-meta">Запрос ещё не выполнялся</div>
+              </div>
+              <div id="sparql-result" class="sparql-result" data-result-panel="result"><p class="sparql-placeholder">Результат появится здесь.</p></div>
+              <div id="sparql-analysis" class="sparql-result" data-result-panel="analysis" hidden><p class="sparql-placeholder">Выполните или проанализируйте запрос.</p></div>
+              <div id="sparql-algebra" class="sparql-result" data-result-panel="algebra" hidden><p class="sparql-placeholder">Алгебра появится после анализа.</p></div>
+            </section>
+          </div>
+        </div>
+      </section>
+      <section id="redis-mode" class="mode-screen sparql-console redis-console" hidden>
+        <div class="sparql-workspace redis-workspace">
+          <aside class="sparql-sidebar">
+            <div class="sparql-side-heading"><h2>Redis</h2><span>READ ONLY</span></div>
+            <div class="sparql-side-tabs">
+              <button class="active" type="button" data-redis-side="templates">Шаблоны</button>
+              <button type="button" data-redis-side="history">История</button>
+            </div>
+            <div data-redis-side-panel="templates">
+              <div class="history-heading"><h3>Системные</h3></div>
+              <div id="redis-system-templates" class="template-list"></div>
+              <div class="history-heading"><h3>Мои</h3></div>
+              <div id="redis-user-templates" class="template-list"></div>
+            </div>
+            <div data-redis-side-panel="history" hidden>
+              <div class="history-heading"><h3>Последние 20</h3><button id="redis-history-clear" type="button">Очистить</button></div>
+              <div id="redis-history" class="sparql-history"></div>
+            </div>
+          </aside>
+          <div class="sparql-main redis-main">
+            <section class="sparql-editor-panel">
+              <div class="sparql-panel-heading">
+                <div><h1>Redis Console</h1><p>Команды выполняются через Redis текущего активного профиля.</p></div>
+                <span class="read-only-badge">READ ONLY</span>
+              </div>
+              <div class="redis-editor-wrap">
+                <input id="redis-editor" class="redis-editor" type="text" list="redis-command-list" autocomplete="off" spellcheck="false" aria-label="Redis command" placeholder="SMEMBERS 2/rb:ups:_...">
+                <datalist id="redis-command-list"></datalist>
+                <div id="redis-command-help" class="redis-command-help">Введите READ-команду Redis.</div>
+              </div>
+              <div class="sparql-toolbar redis-toolbar">
+                <button id="redis-run" type="button"><span aria-hidden="true">▶</span> Выполнить</button>
+                <button id="redis-save-template" class="secondary-toolbar" type="button">Сохранить как шаблон</button>
+                <span id="redis-running-hint" class="sparql-running-hint" aria-live="polite"></span>
+                <span class="shortcut-hint">Ctrl + Enter</span>
+              </div>
+              <div id="redis-error" class="sparql-error" hidden></div>
+              <details class="redis-helper">
+                <summary>CIM helper — сформировать permission key</summary>
+                <div class="redis-helper-fields">
+                  <label>Dataset ID<input id="redis-helper-dataset" type="number" min="0"></label>
+                  <label>Resource<input id="redis-helper-resource" type="text" placeholder="ups:_387..."></label>
+                  <label>Rule<select id="redis-helper-rule"><option value="READ">READ</option><option value="READ_TOP">READ TOP</option><option value="WRITE">WRITE</option></select></label>
+                  <button id="redis-helper-build" type="button">Сформировать команду</button>
+                </div>
+              </details>
+            </section>
+            <section class="sparql-result-panel">
+              <div class="sparql-result-heading">
+                <div class="result-tabs">
+                  <button class="active" type="button" data-redis-result-tab="view">Представление</button>
+                  <button type="button" data-redis-result-tab="raw">Raw</button>
+                </div>
+                <div id="redis-result-meta" class="sparql-result-meta">Команда ещё не выполнялась</div>
+              </div>
+              <div id="redis-result" class="sparql-result redis-result" data-redis-result-panel="view"><p class="sparql-placeholder">Результат появится здесь.</p></div>
+              <div id="redis-raw-result" class="sparql-result redis-result" data-redis-result-panel="raw" hidden><p class="sparql-placeholder">Raw response появится здесь.</p></div>
+            </section>
+          </div>
+        </div>
+        <div id="redis-unavailable" class="redis-unavailable" hidden><strong>Redis Console недоступна для текущего профиля.</strong><p>Прямое Redis подключение не настроено.</p></div>
+      </section>
+    </main>
+    <dialog id="sparql-template-dialog" class="sparql-dialog">
+      <form method="dialog">
+        <h2>Сохранить как шаблон</h2>
+        <label>Название<input name="name" required maxlength="100"></label>
+        <label>Описание<textarea name="description" rows="2"></textarea></label>
+        <label>SPARQL<textarea name="query" rows="10" required spellcheck="false"></textarea></label>
+        <div class="dialog-actions"><button type="button" onclick="this.closest('dialog').close()">Отмена</button><button type="submit">Сохранить</button></div>
+      </form>
+    </dialog>
+    <dialog id="sparql-parameter-dialog" class="sparql-dialog">
+      <form method="dialog">
+        <h2>Параметры</h2><p></p><div class="parameter-fields"></div>
+        <div class="dialog-actions"><button type="button" onclick="this.closest('dialog').close()">Отмена</button><button type="submit" value="editor">Открыть в редакторе</button></div>
+      </form>
+    </dialog>
+    <dialog id="redis-template-dialog" class="sparql-dialog">
+      <form method="dialog">
+        <h2>Сохранить Redis-шаблон</h2>
+        <label>Название<input name="name" required maxlength="100"></label>
+        <label>Описание<textarea name="description" rows="2"></textarea></label>
+        <label>Redis command<textarea name="command" rows="4" required spellcheck="false"></textarea></label>
+        <div class="dialog-actions"><button type="button" onclick="this.closest('dialog').close()">Отмена</button><button type="submit">Сохранить</button></div>
+      </form>
+    </dialog>
+    <dialog id="connection-settings-dialog" class="connection-settings-dialog">
+      <form id="connection-settings-form">
+        <header class="settings-heading">
+          <div><h2>Настройки</h2><p>Подключения</p></div>
+          <button id="settings-close" type="button" aria-label="Закрыть настройки">×</button>
+        </header>
+        <div class="settings-content">
+          <div id="settings-load-error" class="settings-message settings-message--error" hidden></div>
+          <section class="profile-section" aria-labelledby="profile-heading">
+            <div class="profile-label-row"><label id="profile-heading" for="connection-profile">Профиль подключения</label></div>
+            <div class="profile-controls">
+              <select id="connection-profile" aria-label="Профиль подключения"></select>
+              <span id="active-profile-badge" class="active-profile-badge">● Активный</span>
+            </div>
+            <div class="profile-actions">
+              <button id="profile-use" class="profile-use" type="button">Используется</button>
+              <button id="profile-create" type="button">+ Новый профиль</button>
+              <button id="profile-rename" type="button">Переименовать</button>
+              <button id="profile-delete" class="profile-delete" type="button">Удалить</button>
+            </div>
+          </section>
+          <section class="settings-section" data-settings-section="jena">
+            <div class="settings-section-heading"><div><h3>Источник RDF</h3><p id="jena-source-description">Локальный Apache Jena TDB2</p></div><span class="connection-state">Не проверено</span></div>
+            <div class="settings-grid">
+              <label class="settings-wide">Режим подключения<select name="jenaSourceType"><option value="LOCAL_TDB2">Local TDB2</option><option value="CIM_API">CIM App API</option></select></label>
+            </div>
+            <div class="settings-grid" data-source-fields="local">
+              <label class="settings-wide">Тип<select name="jenaType"><option value="TDB2">TDB2</option></select></label>
+              <label class="settings-wide">Путь к Dataset<input name="jenaPath" type="text" autocomplete="off" placeholder="C:\data\jena"></label>
+            </div>
+            <p class="settings-field-note" data-source-fields="local">Путь вводится вручную. Выбор папки будет доступен в desktop-версии.</p>
+            <div class="settings-grid" data-source-fields="cim" hidden>
+              <label class="settings-wide">Base URL<input name="cimBaseUrl" type="url" autocomplete="off" placeholder="https://cim-app.example.ru"></label>
+              <label class="settings-wide">Auth URL<input name="cimAuthBaseUrl" type="url" autocomplete="off" placeholder="Оставьте пустым, если совпадает с Base URL"><span class="password-note">Для локального CIM App обычно http://localhost:8083</span></label>
+              <label>Client ID<input name="cimUsername" type="text" autocomplete="username"></label>
+              <label>Client Secret<input name="cimPassword" type="password" autocomplete="new-password"><span class="password-note"></span></label>
+              <label>Connect timeout, мс<input name="cimConnectTimeoutMs" type="number" min="100" step="100" value="5000"></label>
+              <label>Read timeout, мс<input name="cimReadTimeoutMs" type="number" min="100" step="100" value="30000"></label>
+              <label class="settings-wide settings-tls-option"><input name="cimTrustUntrustedCertificates" type="checkbox" checked><span><strong>Разрешить недоверенный HTTPS-сертификат</strong><small>Имя сервера всё равно проверяется.</small></span></label>
+              <label class="settings-wide">Информационная модель<select name="cimModelId"><option value="">Сначала загрузите модели</option></select></label>
+              <div class="settings-wide cim-model-actions"><button id="cim-load-models" class="settings-test" type="button">Загрузить модели</button></div>
+            </div>
+            <div class="settings-test-row"><button class="settings-test" type="button" data-test-connection="jena">Проверить</button></div>
+          </section>
+          <p id="cim-managed-connections" class="settings-message" hidden>PostgreSQL в режиме CIM App API не требуется. Redis настраивается ниже как отдельное прямое подключение.</p>
+          <section class="settings-section" data-settings-section="postgres">
+            <div class="settings-section-heading"><div><h3>PostgreSQL</h3><p>Metadata для Owner Rules</p></div><span class="connection-state">Не проверено</span></div>
+            <div class="settings-grid">
+              <label>Host<input name="postgresHost" required autocomplete="off"></label>
+              <label>Port<input name="postgresPort" type="number" required min="1" max="65535"></label>
+              <label>Database<input name="postgresDatabase" required autocomplete="off"></label>
+              <label>Schema<input name="postgresSchema" required pattern="[A-Za-z_][A-Za-z0-9_]*" autocomplete="off"></label>
+              <label>Username<input name="postgresUsername" required autocomplete="username"></label>
+              <label>Password<input name="postgresPassword" type="password" autocomplete="new-password"><small class="password-note"></small></label>
+            </div>
+            <div class="settings-test-row"><button class="settings-test" type="button" data-test-connection="postgres">Проверить</button></div>
+          </section>
+          <section class="settings-section" data-settings-section="redis">
+            <div class="settings-section-heading"><div><h3>Redis</h3><p>Отдельное прямое подключение для Redis Rules и Redis Console</p></div><span class="connection-state">Не проверено</span></div>
+            <div class="settings-grid">
+              <label>Host<input name="redisHost" required autocomplete="off"></label>
+              <label>Port<input name="redisPort" type="number" required min="1" max="65535"></label>
+              <label>Database<input name="redisDatabase" type="number" required min="0"></label>
+              <label>Password<input name="redisPassword" type="password" autocomplete="new-password"><small class="password-note"></small></label>
+              <label>Username<input name="redisUsername" autocomplete="off"></label>
+              <label>Timeout, мс<input name="redisTimeoutMs" type="number" required min="100" step="100"></label>
+            </div>
+            <div class="settings-test-row"><button class="settings-test" type="button" data-test-connection="redis">Проверить</button></div>
+          </section>
+          <div id="settings-save-message" class="settings-message" hidden></div>
+        </div>
+        <footer class="settings-actions"><span id="settings-dirty" class="settings-dirty" hidden>Есть несохранённые изменения</span><button id="settings-cancel" type="button">Отмена</button><button id="settings-save" type="submit" disabled>Сохранить</button></footer>
+      </form>
+    </dialog>
+    <dialog id="profile-dialog" class="profile-dialog">
+      <form id="profile-form">
+        <h2 id="profile-dialog-title">Новый профиль</h2>
+        <label>Название<input name="profileName" required maxlength="80" autocomplete="off"></label>
+        <label id="profile-copy-label" class="profile-copy"><input name="copyCurrent" type="checkbox"> Создать копию текущего профиля</label>
+        <div id="profile-dialog-error" class="settings-message settings-message--error" hidden></div>
+        <div class="dialog-actions"><button id="profile-dialog-cancel" type="button">Отмена</button><button id="profile-dialog-submit" type="submit">Создать</button></div>
+      </form>
+    </dialog>
+    <dialog id="shutdown-dialog" class="shutdown-dialog">
+      <form method="dialog">
+        <h2>Выключить Jena Ripper?</h2>
+        <p>Приложение завершит работу и освободит открытые подключения, включая локальный Jena Dataset.</p>
+        <div id="shutdown-error" class="settings-message settings-message--error" hidden></div>
+        <div class="dialog-actions"><button id="shutdown-cancel" type="button">Отмена</button><button id="shutdown-confirm" class="shutdown-confirm" type="button">Выключить</button></div>
+      </form>
+    </dialog>
+    <section id="shutdown-screen" class="shutdown-screen" aria-live="polite" hidden>
+      <div><h1 id="shutdown-title">Jena Ripper завершает работу</h1><p id="shutdown-message">Все подключения закрываются...</p></div>
+    </section>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+    (?s so:Object.DataSourceToBottom ?organisation) <-
+    noValue(?s, so:HasDirectAssetDataSource)
+    noValue(?s, so:Object.OwnersToBottom)
+    (?s cim:Equipment.EquipmentContainer ?o)
+    (?o rdf:type {{CLASS_TYPE}})
+    (?o so:Object.DataSourceToBottom ?organisation)
+    noValue(?s so:Object.DataSourceToBottom ?organisation)
+
+

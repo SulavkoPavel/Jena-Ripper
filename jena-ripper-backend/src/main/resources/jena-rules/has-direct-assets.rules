@@ -1,0 +1,20 @@
+@prefix cim: <http://iec.ch/TC57/CIM100#>.
+@prefix ups: <https://cim.so-ups.ru#>.
+@prefix so: <http://so-ups.ru/2015/schema-cim16#>.
+@prefix me: <http://monitel.com/2014/schema-cim16#>.
+@prefix rf: <http://gost.ru/2019/schema-cim01#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+
+[hasDirectAssetOwner:
+    (?s so:HasDirectAssetOwner true) <-
+    (?s rf:IdentifiedObject.OrganisationRoles ?org)
+    (?org rdf:type cim:AssetOwner)
+]
+
+[hasDirectAssetDataSource:
+    (?s so:HasDirectAssetDataSource true) <-
+    (?s rf:IdentifiedObject.OrganisationRoles ?org)
+    (?org rdf:type so:AssetDataSource)
+]
+

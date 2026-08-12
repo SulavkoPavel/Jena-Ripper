@@ -1,0 +1,3 @@
+ef387b4c632e795c34e6fbfecc854739f170b9ce1d63ef1264f9707b61ecf9de  Jena-Ripper-1.0.0-Windows-x64.zip
+34e069df1314cf1be58e68121c2ceb8740f6f5741bdca64bca53737c2d4b7801  Jena-Ripper-1.0.0-macOS-arm64.zip
+ef774186ca4701641d1b8148c33b057ef2fdc4c9be14e54ca03747993d1b0f69  Jena-Ripper-1.0.0-macOS-x64.zip

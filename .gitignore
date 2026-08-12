@@ -1,0 +1,16 @@
+backend/target/
+backend/data/
+frontend/node_modules/
+frontend/dist/
+jena-ripper-backend/target/
+jena-ripper-backend/data/
+jena-ripper-frontend/node_modules/
+jena-ripper-frontend/dist/
+release/*
+!release/*.zip
+!release/SHA256SUMS.txt
+packaging/runtime-cache/
+backend/target/generated-resources/
+.idea/
+*.iml
+*.log

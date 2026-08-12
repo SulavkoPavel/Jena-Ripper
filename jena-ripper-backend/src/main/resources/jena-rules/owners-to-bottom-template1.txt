@@ -1,0 +1,8 @@
+    (?s so:Object.OwnersToBottom ?organisation) <-
+    noValue(?s, so:HasDirectAssetOwner)
+    (?s {{INVERSE_ROLE}} ?o)
+    (?o rf:IdentifiedObject.OrganisationRoles ?orgRoles)
+    (?orgRoles rdf:type cim:AssetOwner)
+    (?orgRoles cim:OrganisationRole.Organisation ?organisation)
+    noValue(?s so:Object.OwnersToBottom ?organisation)
+

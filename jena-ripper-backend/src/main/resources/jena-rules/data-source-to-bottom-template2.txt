@@ -1,0 +1,8 @@
+    (?s so:Object.DataSourceToBottom ?organisation) <-
+    noValue(?s, so:HasDirectAssetDataSource)
+    noValue(?s, so:Object.OwnersToBottom)
+    (?s {{INVERSE_ROLE}} ?o)
+    (?o so:Object.DataSourceToBottom ?organisation)
+    noValue(?s so:Object.DataSourceToBottom ?organisation)
+
+

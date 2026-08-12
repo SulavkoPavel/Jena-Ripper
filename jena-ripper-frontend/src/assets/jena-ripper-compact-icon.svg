@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>Jena Ripper</title>
+  <desc>Compact Jena Ripper mark with a hooded investigator, RDF graph and magnifying glass.</desc>
+  <rect width="64" height="64" rx="12" fill="#02111C"/>
+  <rect x="1" y="1" width="62" height="62" rx="11" stroke="#087F91" stroke-opacity=".55" stroke-width="2"/>
+
+  <path d="M10 17L21 10L31 15L50 11L56 25" stroke="#1687C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="17" r="3.5" fill="#20C8D8"/>
+  <circle cx="21" cy="10" r="3.5" fill="#087F91" stroke="#69E3ED"/>
+  <circle cx="31" cy="15" r="3" fill="#2D9CDB"/>
+  <circle cx="50" cy="11" r="3.5" fill="#20C8D8"/>
+  <circle cx="56" cy="25" r="3" fill="#2D9CDB"/>
+
+  <path d="M16 51C16.6 42.2 16.9 30.8 22.8 21.4C25.3 17.4 28.3 15 32 15C35.8 15 38.8 17.4 41.3 21.4C46.9 30.5 47.4 42.1 48 51H16Z" fill="#0B3044" stroke="#20C8D8" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M24 27.5C26.3 23.4 28.7 21.5 32 21.5C35.3 21.5 37.8 23.4 40 27.5L37.1 39.5C35.5 42 34 43.2 32 43.2C30 43.2 28.5 42 26.9 39.5L24 27.5Z" fill="#02111C"/>
+  <path d="M27.5 33C29 32.2 30.2 32 31.2 32M36.5 33C35 32.2 33.8 32 32.8 32" stroke="#76DDE7" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M22 49C25.5 46.5 28.8 45.3 32 45.3C35.2 45.3 38.5 46.5 42 49" stroke="#1687C7" stroke-width="2.2" stroke-linecap="round"/>
+
+  <circle cx="44" cy="40" r="7.5" fill="#062031" stroke="#69E3ED" stroke-width="3"/>
+  <path d="M49.5 45.5L56 52" stroke="#69E3ED" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M41 36.8C42.5 35.3 44.7 34.8 46.6 35.6" stroke="#D9F5F7" stroke-width="1.6" stroke-linecap="round"/>
+
+  <path d="M12 47L19.5 39.5L22 42L14.5 49.5L11 51L12 47Z" fill="#2D9CDB" stroke="#76DDE7" stroke-width="1" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,7 @@
+    (?s so:Object.OwnersToBottom ?organisation) <-
+    noValue(?s, so:HasDirectAssetOwner)
+    (?s cim:Equipment.EquipmentContainer ?o)
+    (?o rdf:type {{CLASS_TYPE}})
+    (?o so:Object.OwnersToBottom ?organisation)
+    noValue(?s so:Object.OwnersToBottom ?organisation)
+

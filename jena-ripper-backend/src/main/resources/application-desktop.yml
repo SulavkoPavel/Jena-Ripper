@@ -1,0 +1,11 @@
+server:
+  address: 127.0.0.1
+  port: 0
+
+jena-ripper:
+  settings:
+    path: ${LOCALAPPDATA:${user.home}/AppData/Local}/JenaRipper/jena-ripper-settings.json
+
+logging:
+  file:
+    name: ${LOCALAPPDATA:${user.home}/AppData/Local}/JenaRipper/logs/jena-ripper.log
