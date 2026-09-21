@@ -10,9 +10,9 @@ Portable-архивы уже содержат Java Runtime. Для запуск�
 
 | Операционная система | Архив | Запуск после распаковки |
 |---|---|---|
-| Windows 10/11 x64 | [Скачать Jena Ripper 1.0.0 для Windows x64](release/Jena-Ripper-1.0.0-Windows-x64.zip) | `Jena-Ripper/start.bat` |
-| macOS Apple Silicon — M1/M2/M3/M4 | [Скачать Jena Ripper 1.0.0 для macOS arm64](release/Jena-Ripper-1.0.0-macOS-arm64.zip) | `Jena-Ripper/Jena Ripper.command` |
-| macOS Intel | [Скачать Jena Ripper 1.0.0 для macOS x64](release/Jena-Ripper-1.0.0-macOS-x64.zip) | `Jena-Ripper/Jena Ripper.command` |
+| Windows 10/11 x64 | [Скачать Jena Ripper 2.0.0 для Windows x64](release/Jena-Ripper-2.0.0-Windows-x64.zip) | `Jena-Ripper/start.bat` |
+| macOS Apple Silicon — M1/M2/M3/M4 | [Скачать Jena Ripper 2.0.0 для macOS arm64](release/Jena-Ripper-2.0.0-macOS-arm64.zip) | `Jena-Ripper/Jena Ripper.command` |
+| macOS Intel | [Скачать Jena Ripper 2.0.0 для macOS x64](release/Jena-Ripper-2.0.0-macOS-x64.zip) | `Jena-Ripper/Jena Ripper.command` |
 
 Контрольные суммы: [SHA256SUMS.txt](release/SHA256SUMS.txt).
 
@@ -22,7 +22,7 @@ Portable-архивы уже содержат Java Runtime. Для запуск�
 
 ### Windows
 
-1. Скачайте `Jena-Ripper-1.0.0-Windows-x64.zip`.
+1. Скачайте `Jena-Ripper-2.0.0-Windows-x64.zip`.
 2. Полностью распакуйте архив в обычную папку. Не запускайте приложение прямо из окна ZIP.
 3. Откройте папку `Jena-Ripper` и запустите `start.bat`.
 4. Дождитесь открытия Jena Ripper в браузере.
@@ -113,8 +113,8 @@ PostgreSQL используется для Owner Rules при локальном
 
 | ОС | Настройки и профили | Логи |
 |---|---|---|
-| Windows | `%LOCALAPPDATA%\JenaRipper\jena-ripper-settings.json` | `%LOCALAPPDATA%\JenaRipper\logs\jena-ripper.log` |
-| macOS | `~/Library/Application Support/JenaRipper/jena-ripper-settings.json` | `~/Library/Logs/JenaRipper/jena-ripper.log` |
+| Windows | `%APPDATA%\jena-ripper\profiles.json` | `%LOCALAPPDATA%\JenaRipper\logs\jena-ripper.log` |
+| Linux/macOS | `~/.jena-ripper/profiles.json` | `~/Library/Logs/JenaRipper/jena-ripper.log` |
 
 Не публикуйте файл настроек: он может содержать пароли подключений.
 

@@ -1,5 +1,7 @@
 package org.jenaripper.redis;
 
+import org.jenaripper.exception.RedisCommandException;
+
 import org.jenaripper.dto.RedisConsoleMetadataDto;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +14,9 @@ import java.util.Set;
 
 @Component
 public class RedisCommandRegistry {
+    public static final long DEFAULT_SCAN_COUNT = 100;
+    private static final long MAX_SCAN_COUNT = 1_000;
+    private static final int MAX_HASH_FIELDS = 100;
     private static final Set<String> FORBIDDEN = Set.of(
             "KEYS", "DEL", "UNLINK", "FLUSHDB", "FLUSHALL", "SET", "MSET", "SETEX", "PSETEX",
             "SADD", "SREM", "HSET", "HDEL", "EXPIRE", "PEXPIRE", "RENAME", "RENAMENX", "MOVE",
@@ -40,7 +45,8 @@ public class RedisCommandRegistry {
                 (e, a) -> result("STRING", e.hget(a.get(0), a.get(1))));
         register("HGETALL", "HASH", "HGETALL key", "Возвращает все поля HASH.", 1, 1,
                 (e, a) -> result("MAP", e.hgetall(a.get(0))));
-        register("HMGET", "HASH", "HMGET key field [field ...]", "Читает несколько полей HASH.", 2, 100,
+        register("HMGET", "HASH", "HMGET key field [field ...]", "Читает несколько полей HASH.",
+                2, MAX_HASH_FIELDS,
                 (e, a) -> result("MAP", e.hmget(a.get(0), a.subList(1, a.size()))));
         register("HLEN", "HASH", "HLEN key", "Возвращает число полей HASH.", 1, 1,
                 (e, a) -> result("INTEGER", e.hlen(a.get(0))));
@@ -83,7 +89,7 @@ public class RedisCommandRegistry {
         String cursor = args.get(0);
         if (!cursor.matches("\\d+")) throw invalidScan();
         String pattern = null;
-        long count = 100;
+        long count = DEFAULT_SCAN_COUNT;
         for (int index = 1; index < args.size(); index += 2) {
             if (index + 1 >= args.size()) throw invalidScan();
             String option = args.get(index).toUpperCase(Locale.ROOT);
@@ -91,7 +97,9 @@ public class RedisCommandRegistry {
             else if ("COUNT".equals(option)) count = number(args.get(index + 1));
             else throw invalidScan();
         }
-        if (count < 1 || count > 1000) throw new RedisCommandException("REDIS_COMMAND_INVALID", "COUNT должен быть от 1 до 1000.");
+        if (count < 1 || count > MAX_SCAN_COUNT) {
+            throw new RedisCommandException("REDIS_COMMAND_INVALID", "COUNT должен быть от 1 до 1000.");
+        }
         RedisCommandExecutor.ScanResult scan = executor.scan(cursor, pattern, count);
         return new Result("SCAN", scan.keys(), scan.cursor(), scan.keys().size());
     }

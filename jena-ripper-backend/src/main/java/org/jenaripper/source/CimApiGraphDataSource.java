@@ -1,5 +1,6 @@
 package org.jenaripper.source;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.datatypes.TypeMapper;
@@ -15,14 +16,10 @@ import java.util.List;
 import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class CimApiGraphDataSource implements GraphDataSource {
     private final CimApiClient client;
     private final PrefixService prefixes;
-
-    public CimApiGraphDataSource(CimApiClient client, PrefixService prefixes) {
-        this.client = client;
-        this.prefixes = prefixes;
-    }
 
     public List<Quad> outgoing(String uri, int limit) {
         String query = "SELECT ?p ?o (IF(isIRI(?o), 'uri', IF(isBlank(?o), 'bnode', 'literal')) AS ?oKind) " +

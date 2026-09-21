@@ -1,5 +1,6 @@
 package org.jenaripper.service;
 
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.dto.SparqlBenchmarkRequest;
 import org.jenaripper.dto.SparqlBenchmarkResponse;
 import org.jenaripper.dto.SparqlQueryResponse;
@@ -10,12 +11,9 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SparqlBenchmarkService {
     private final SparqlQueryService queryService;
-
-    public SparqlBenchmarkService(SparqlQueryService queryService) {
-        this.queryService = queryService;
-    }
 
     public SparqlBenchmarkResponse benchmark(SparqlBenchmarkRequest request) {
         List<Long> warmups = new ArrayList<>();

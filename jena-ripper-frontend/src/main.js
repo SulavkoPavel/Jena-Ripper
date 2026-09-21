@@ -3,8 +3,17 @@ import { api } from './api.js';
 import { RdfGraph } from './graph.js';
 import { initSparqlConsole } from './sparql.js';
 import { initRedisConsole } from './redis-console.js';
+import { initMetamodelExplorer } from './metamodel.js';
 import { initConnectionSettings } from './settings.js';
 import { initializeUserData } from './user-data.js';
+import { RDF_SOURCE_TYPE } from './source-types.js';
+
+const APPLICATION_RESTART_TIMEOUT_MS = 60_000;
+const APPLICATION_RESTART_POLL_INTERVAL_MS = 500;
+const SHUTDOWN_SCREEN_DELAY_MS = 1_500;
+const METAMODEL_SEARCH_RESULT_LIMIT = 12;
+const OPERATION_STATUS_INTERVAL_MS = 100;
+const SLOW_OPERATION_SECONDS = 5;
 
 async function bootstrap() {
   try {
@@ -18,14 +27,18 @@ const graphContainer = document.querySelector('#graph');
 const detailsPanel = document.querySelector('#details');
 const message = document.querySelector('#message');
 const results = document.querySelector('#search-results');
+const searchForm = document.querySelector('#search-form');
+const searchInput = document.querySelector('#search-input');
 const status = document.querySelector('#header-status');
 const clearButton = document.querySelector('#clear-button');
 const graphMode = document.querySelector('#graph-mode');
 const sparqlMode = document.querySelector('#sparql-mode');
 const redisMode = document.querySelector('#redis-mode');
+const metamodelMode = document.querySelector('#metamodel-mode');
 const graphModeButton = document.querySelector('#graph-mode-button');
 const sparqlModeButton = document.querySelector('#sparql-mode-button');
 const redisModeButton = document.querySelector('#redis-mode-button');
+const metamodelModeButton = document.querySelector('#metamodel-mode-button');
 const shutdownButton = document.querySelector('#shutdown-button');
 const shutdownDialog = document.querySelector('#shutdown-dialog');
 const shutdownConfirm = document.querySelector('#shutdown-confirm');
@@ -36,6 +49,9 @@ let ownerRulesAvailable = false;
 let redisRulesAvailable = false;
 let currentDetails = null;
 let lastSuccessfulConnectionAt = 0;
+let autocompleteRequest = 0;
+let metamodelAutocompleteItems = [];
+let metamodelAutocompleteIndex = -1;
 const ownerRulesCache = new Map();
 const redisRulesCache = new Map();
 const redisRulesRequests = new Map();
@@ -57,11 +73,16 @@ async function restartForConnectionProfile(profileId) {
   redisRulesCache.clear();
   sparqlConsole.resetResults();
   redisConsole.resetResults();
+  const previousRuntime = await api.applicationRuntime().catch(() => null);
   await api.restartApplication();
-  const deadline = Date.now() + 60000;
+  const deadline = Date.now() + APPLICATION_RESTART_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, APPLICATION_RESTART_POLL_INTERVAL_MS));
     try {
+      if (previousRuntime?.instanceId) {
+        const runtime = await api.applicationRuntime();
+        if (runtime.instanceId === previousRuntime.instanceId) continue;
+      }
       const response = await api.status();
       if (response.features?.activeProfileId === profileId) {
         window.location.reload();
@@ -90,6 +111,7 @@ const sparqlConsole = initSparqlConsole({
   }
 });
 const redisConsole = initRedisConsole();
+const metamodelExplorer = initMetamodelExplorer();
 
 loadStatus();
 loadApplicationRuntime();
@@ -97,17 +119,33 @@ loadApplicationRuntime();
 graphModeButton.addEventListener('click', () => switchMode('graph'));
 sparqlModeButton.addEventListener('click', () => switchMode('sparql'));
 redisModeButton.addEventListener('click', () => switchMode('redis'));
+metamodelModeButton.addEventListener('click', () => switchMode('metamodel'));
 
 document.querySelector('#start-form').addEventListener('submit', event => {
   event.preventDefault();
   openResource(document.querySelector('#start-uri').value);
 });
 
-document.querySelector('#search-form').addEventListener('submit', async event => {
+searchForm.addEventListener('submit', async event => {
   event.preventDefault();
-  const query = document.querySelector('#search-input').value.trim();
+  const query = searchInput.value.trim();
   if (!query) return;
+  if (metamodelModeButton.classList.contains('active')) {
+    await metamodelExplorer.show();
+    const found = metamodelExplorer.search(query);
+    if (!found.length) {
+      closeMetamodelAutocomplete(false);
+      results.hidden = false;
+      results.innerHTML = '<p class="search-empty">Класс не найден</p>';
+      searchInput.setAttribute('aria-expanded', 'true');
+      return;
+    }
+    showMetamodelAutocomplete(found);
+    metamodelExplorer.focus(found[0]);
+    return;
+  }
   results.hidden = false;
+  searchInput.setAttribute('aria-expanded', 'true');
   results.innerHTML = '<p class="search-empty">Поиск…</p>';
   try {
     const found = await api.search(query);
@@ -119,8 +157,36 @@ document.querySelector('#search-form').addEventListener('submit', async event =>
     results.replaceChildren(...found.map(searchResult));
   } catch (error) {
     results.hidden = true;
+    searchInput.setAttribute('aria-expanded', 'false');
     showMessage(error.message, true);
   }
+});
+
+searchInput.addEventListener('input', updateMetamodelAutocomplete);
+searchInput.addEventListener('focus', updateMetamodelAutocomplete);
+searchInput.addEventListener('keydown', event => {
+  if (!metamodelModeButton.classList.contains('active') || results.hidden) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeMetamodelAutocomplete();
+    return;
+  }
+  if (!metamodelAutocompleteItems.length) return;
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    setMetamodelAutocompleteIndex((metamodelAutocompleteIndex + 1) % metamodelAutocompleteItems.length);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    setMetamodelAutocompleteIndex((metamodelAutocompleteIndex - 1 + metamodelAutocompleteItems.length)
+      % metamodelAutocompleteItems.length);
+  } else if (event.key === 'Enter' && metamodelAutocompleteIndex >= 0) {
+    event.preventDefault();
+    selectMetamodelClass(metamodelAutocompleteItems[metamodelAutocompleteIndex]);
+  }
+});
+
+document.addEventListener('pointerdown', event => {
+  if (!searchForm.contains(event.target)) closeMetamodelAutocomplete();
 });
 
 clearButton.addEventListener('click', clearCurrentGraph);
@@ -153,7 +219,7 @@ async function shutdownApplication() {
     setTimeout(() => {
       document.querySelector('#shutdown-title').textContent = 'Jena Ripper выключен.';
       document.querySelector('#shutdown-message').textContent = 'Эту вкладку можно закрыть.';
-    }, 1500);
+    }, SHUTDOWN_SCREEN_DELAY_MS);
   } catch (error) {
     shutdownError.textContent = error.message;
     shutdownError.hidden = false;
@@ -167,6 +233,7 @@ async function loadStatus() {
   try {
     const response = await api.status();
     const profiles = await api.connectionProfiles().catch(() => null);
+    if (profiles) connectionSettings.setProfiles(profiles);
     const activeProfile = profiles?.profiles.find(profile => profile.id === profiles.activeProfileId);
     const runtimeProfile = profiles?.profiles.find(profile => profile.id === response.features?.activeProfileId)
       || activeProfile;
@@ -180,7 +247,7 @@ async function loadStatus() {
       : response.dataset.error || `${response.dataset.type}${response.dataset.path ? ` · ${response.dataset.path}` : ''}`;
     ownerRulesAvailable = response.features?.ownerRules === true;
     redisRulesAvailable = response.features?.redisRules === true;
-    connectionSettings.setRuntimeProfileId(response.features?.activeProfileId);
+    connectionSettings.setRuntimeProfileId(runtimeProfile?.id || response.features?.activeProfileId);
     connectionSettings.setCapabilities(response.features || {});
     sparqlConsole.setCapabilities(response.features || {});
     redisConsole.setCapabilities(response.features || {});
@@ -204,7 +271,7 @@ function renderConnectionStatus(activeProfile, fallback) {
 function connectionTooltip(profile, connectionError, pendingProfile) {
   const jena = profile.jena;
   const lines = [`Профиль: ${profile.name}`];
-  if (jena.sourceType === 'CIM_API') {
+  if (jena.sourceType === RDF_SOURCE_TYPE.CIM_API) {
     lines.push('Источник: CIM App API');
     const model = jena.cimApi?.modelName;
     const modelId = jena.cimApi?.modelId;
@@ -232,9 +299,86 @@ function searchResult(item) {
   button.innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(type)}</span><small>${escapeHtml(item.compactUri)}</small>`;
   button.addEventListener('click', () => {
     results.hidden = true;
+    searchInput.setAttribute('aria-expanded', 'false');
     openResource(item.uri);
   });
   return button;
+}
+
+function metamodelSearchResult(item, index) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = `metamodel-search-option-${index}`;
+  button.setAttribute('role', 'option');
+  button.setAttribute('aria-selected', String(index === metamodelAutocompleteIndex));
+  button.classList.toggle('active', index === metamodelAutocompleteIndex);
+  button.innerHTML = `<strong>${escapeHtml(item.name || item.id)}</strong><small>${escapeHtml(item.id || item.uri)}</small>`;
+  button.addEventListener('mouseenter', () => setMetamodelAutocompleteIndex(index, false));
+  button.addEventListener('click', () => selectMetamodelClass(item));
+  return button;
+}
+
+async function updateMetamodelAutocomplete() {
+  const request = ++autocompleteRequest;
+  const query = searchInput.value.trim();
+  if (!metamodelModeButton.classList.contains('active') || !query) {
+    closeMetamodelAutocomplete();
+    return;
+  }
+  await metamodelExplorer.show();
+  if (request !== autocompleteRequest
+    || !metamodelModeButton.classList.contains('active')
+    || searchInput.value.trim() !== query) return;
+  showMetamodelAutocomplete(metamodelExplorer.search(query));
+}
+
+function showMetamodelAutocomplete(items) {
+  metamodelAutocompleteItems = items.slice(0, METAMODEL_SEARCH_RESULT_LIMIT);
+  metamodelAutocompleteIndex = metamodelAutocompleteItems.length ? 0 : -1;
+  if (!metamodelAutocompleteItems.length) {
+    closeMetamodelAutocomplete();
+    return;
+  }
+  results.classList.add('metamodel-autocomplete');
+  results.replaceChildren(...metamodelAutocompleteItems.map(metamodelSearchResult));
+  results.hidden = false;
+  searchInput.setAttribute('aria-expanded', 'true');
+  searchInput.setAttribute('aria-activedescendant', `metamodel-search-option-${metamodelAutocompleteIndex}`);
+}
+
+function setMetamodelAutocompleteIndex(index, scroll = true) {
+  metamodelAutocompleteIndex = index;
+  const buttons = Array.from(results.querySelectorAll('[role="option"]'));
+  buttons.forEach((button, buttonIndex) => {
+    const active = buttonIndex === index;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  const active = buttons[index];
+  if (!active) return;
+  searchInput.setAttribute('aria-activedescendant', active.id);
+  if (scroll) {
+    if (active.offsetTop < results.scrollTop) results.scrollTop = active.offsetTop;
+    const bottom = active.offsetTop + active.offsetHeight;
+    if (bottom > results.scrollTop + results.clientHeight) results.scrollTop = bottom - results.clientHeight;
+  }
+}
+
+function selectMetamodelClass(item) {
+  searchInput.value = item.name || item.id;
+  closeMetamodelAutocomplete();
+  metamodelExplorer.focus(item);
+}
+
+function closeMetamodelAutocomplete(clear = true) {
+  autocompleteRequest++;
+  metamodelAutocompleteItems = [];
+  metamodelAutocompleteIndex = -1;
+  results.hidden = true;
+  results.classList.remove('metamodel-autocomplete');
+  searchInput.setAttribute('aria-expanded', 'false');
+  searchInput.removeAttribute('aria-activedescendant');
+  if (clear) results.replaceChildren();
 }
 
 async function openResource(resource) {
@@ -372,10 +516,10 @@ async function loadOwnerRules(details, refresh = false) {
   const started = performance.now();
   const renderLoading = () => {
     const elapsed = (performance.now() - started) / 1000;
-    panel.innerHTML = `<div class="owner-loading"><span class="owner-spinner"></span><strong>Определяем владельца… ${elapsed.toFixed(1)} с</strong>${elapsed >= 5 ? '<p>Определение владельца занимает больше времени…</p>' : ''}</div>`;
+    panel.innerHTML = `<div class="owner-loading"><span class="owner-spinner"></span><strong>Определяем владельца… ${elapsed.toFixed(1)} с</strong>${elapsed >= SLOW_OPERATION_SECONDS ? '<p>Определение владельца занимает больше времени…</p>' : ''}</div>`;
   };
   renderLoading();
-  const timer = window.setInterval(renderLoading, 100);
+  const timer = window.setInterval(renderLoading, OPERATION_STATUS_INTERVAL_MS);
   try {
     const response = await api.ownerRules(details.uri);
     ownerRulesCache.set(details.uri, response);
@@ -442,10 +586,10 @@ async function loadRedisRules(details, refresh = false) {
   const started = performance.now();
   const renderLoading = () => {
     const elapsed = (performance.now() - started) / 1000;
-    panel.innerHTML = `<div class="owner-loading"><span class="owner-spinner"></span><strong>Читаем Redis… ${elapsed.toFixed(1)} с</strong>${elapsed >= 5 ? '<p>Redis отвечает дольше обычного…</p>' : ''}</div>`;
+    panel.innerHTML = `<div class="owner-loading"><span class="owner-spinner"></span><strong>Читаем Redis… ${elapsed.toFixed(1)} с</strong>${elapsed >= SLOW_OPERATION_SECONDS ? '<p>Redis отвечает дольше обычного…</p>' : ''}</div>`;
   };
   renderLoading();
-  const timer = window.setInterval(renderLoading, 100);
+  const timer = window.setInterval(renderLoading, OPERATION_STATUS_INTERVAL_MS);
   let request = !refresh ? redisRulesRequests.get(details.uri) : null;
   if (!request) {
     request = api.redisRules(details.uri);
@@ -533,18 +677,29 @@ function updateGraphControls() {
 function switchMode(mode) {
   const sparqlActive = mode === 'sparql';
   const redisActive = mode === 'redis';
-  const graphActive = !sparqlActive && !redisActive;
+  const metamodelActive = mode === 'metamodel';
+  const graphActive = !sparqlActive && !redisActive && !metamodelActive;
   graphMode.hidden = !graphActive;
+  metamodelMode.hidden = !metamodelActive;
   sparqlMode.hidden = !sparqlActive;
   redisMode.hidden = !redisActive;
   graphModeButton.classList.toggle('active', graphActive);
   sparqlModeButton.classList.toggle('active', sparqlActive);
   redisModeButton.classList.toggle('active', redisActive);
+  metamodelModeButton.classList.toggle('active', metamodelActive);
   graphModeButton.setAttribute('aria-current', graphActive ? 'page' : 'false');
   sparqlModeButton.setAttribute('aria-current', sparqlActive ? 'page' : 'false');
   redisModeButton.setAttribute('aria-current', redisActive ? 'page' : 'false');
+  metamodelModeButton.setAttribute('aria-current', metamodelActive ? 'page' : 'false');
+  clearButton.hidden = metamodelActive;
+  document.querySelector('#reset-button').hidden = metamodelActive;
+  searchInput.placeholder = metamodelActive
+    ? 'Поиск класса метамодели по имени или URI'
+    : 'Поиск по имени, URI, UUID или классу';
+  closeMetamodelAutocomplete();
   if (sparqlActive) sparqlConsole.focus();
   if (redisActive) redisConsole.focus();
+  if (metamodelActive) metamodelExplorer.show();
 }
 
 function propertyRow(property) {

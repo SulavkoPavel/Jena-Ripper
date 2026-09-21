@@ -1,9 +1,8 @@
 package org.jenaripper.settings;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.jenaripper.dto.UserDataDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
@@ -17,8 +16,8 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 
 @Repository
+@Slf4j
 public class UserDataRepository {
-    private static final Logger log = LoggerFactory.getLogger(UserDataRepository.class);
     private static final String FILE_NAME = "jena-ripper-user-data.json";
 
     private final ObjectMapper objectMapper;
@@ -54,7 +53,8 @@ public class UserDataRepository {
             return objectMapper.readValue(path.toFile(), UserDataDto.class);
         } catch (Exception exception) {
             backupCorruptedFile();
-            log.error("Could not read Jena Ripper user data. Empty collections will be used. Backup created for {}", path);
+            log.error("Не удалось прочитать пользовательские данные Jena Ripper. Будут использованы пустые коллекции. Резервная копия: {}",
+                    path, exception);
             return UserDataDto.empty();
         }
     }
@@ -85,7 +85,8 @@ public class UserDataRepository {
             String suffix = ".corrupt-" + Instant.now().toEpochMilli() + ".bak";
             Files.copy(path, path.resolveSibling(path.getFileName() + suffix));
         } catch (Exception exception) {
-            log.error("Could not create a backup of corrupted Jena Ripper user data: {}", path);
+            log.error("Не удалось создать резервную копию повреждённых пользовательских данных Jena Ripper: {}",
+                    path, exception);
         }
     }
 
@@ -93,7 +94,7 @@ public class UserDataRepository {
         if (configuredPath != null && !configuredPath.isBlank()) {
             return Path.of(configuredPath).toAbsolutePath().normalize();
         }
-        Path settings = Path.of(settingsPath).toAbsolutePath().normalize();
+        Path settings = ConnectionProfilePaths.resolve(settingsPath);
         return settings.resolveSibling(FILE_NAME);
     }
 }

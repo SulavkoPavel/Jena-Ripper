@@ -2,9 +2,9 @@ package org.jenaripper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jenaripper.redis.CimApiRedisCommandExecutor;
-import org.jenaripper.redis.RedisCommandException;
+import org.jenaripper.exception.RedisCommandException;
 import org.jenaripper.remote.CimApiClient;
-import org.jenaripper.remote.CimApiException;
+import org.jenaripper.exception.CimApiException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

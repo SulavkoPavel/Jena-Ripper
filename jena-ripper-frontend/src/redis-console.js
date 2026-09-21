@@ -1,6 +1,12 @@
 import { api } from './api.js';
 import { userDataRepository } from './user-data.js';
 
+const REDIS_TEMPLATE_LIMIT = 50;
+const REDIS_HISTORY_LIMIT = 20;
+const OPERATION_STATUS_INTERVAL_MS = 100;
+const SLOW_OPERATION_SECONDS = 5;
+const VERY_SLOW_OPERATION_SECONDS = 15;
+
 export function initRedisConsole() {
   const editor = document.querySelector('#redis-editor');
   const runButton = document.querySelector('#redis-run');
@@ -67,8 +73,10 @@ export function initRedisConsole() {
     const timer = window.setInterval(() => {
       const seconds = (performance.now() - started) / 1000;
       runButton.innerHTML = `<span class="button-spinner"></span> Выполняется… ${seconds.toFixed(1)} с`;
-      hint.textContent = seconds > 15 ? 'Команда выполняется дольше обычного.' : seconds > 5 ? 'Команда всё ещё выполняется…' : '';
-    }, 100);
+      hint.textContent = seconds > VERY_SLOW_OPERATION_SECONDS
+        ? 'Команда выполняется дольше обычного.'
+        : seconds > SLOW_OPERATION_SECONDS ? 'Команда всё ещё выполняется…' : '';
+    }, OPERATION_STATUS_INTERVAL_MS);
     try {
       lastResponse = await api.redisCommand(parsed.command, parsed.args);
       renderResponse(lastResponse);
@@ -170,7 +178,7 @@ export function initRedisConsole() {
     const templates = userDataRepository.all('redisTemplates');
     templates.unshift({ id: crypto.randomUUID(), name: form.elements.name.value.trim(), description: form.elements.description.value.trim(), command: form.elements.command.value.trim() });
     try {
-      await userDataRepository.replace('redisTemplates', templates.slice(0, 50));
+      await userDataRepository.replace('redisTemplates', templates.slice(0, REDIS_TEMPLATE_LIMIT));
       templateDialog.close(); renderUserTemplates();
     } catch (error) { showError('USER_DATA_SAVE_FAILED', error.message); }
   }
@@ -203,7 +211,7 @@ export function initRedisConsole() {
   async function addHistory(command, response) {
     const history = userDataRepository.all('redisHistory');
     history.unshift({ command, name: response.command, duration: response.executionTimeMs, at: new Date().toISOString() });
-    await userDataRepository.replace('redisHistory', history.slice(0, 20));
+    await userDataRepository.replace('redisHistory', history.slice(0, REDIS_HISTORY_LIMIT));
     renderHistory();
   }
 

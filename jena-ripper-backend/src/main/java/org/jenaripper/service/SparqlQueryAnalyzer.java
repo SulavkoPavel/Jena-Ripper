@@ -26,6 +26,8 @@ import java.util.Set;
 
 @Service
 public class SparqlQueryAnalyzer {
+    private static final int COMPLEXITY_WARNING_THRESHOLD = 3;
+
     public SparqlQueryAnalysis analyze(Query query) {
         Stats stats = new Stats();
         if (query.getQueryPattern() != null) {
@@ -54,8 +56,14 @@ public class SparqlQueryAnalyzer {
         if (ordered) recommendations.add(new QueryRecommendation("ORDER_BY", query.hasLimit() ? "INFO" : "WARNING"));
         if (grouped || !aggregates.isEmpty()) recommendations.add(new QueryRecommendation("AGGREGATION", "INFO"));
         if (stats.regex) recommendations.add(new QueryRecommendation("REGEX_FILTER", "WARNING"));
-        if (stats.optionals >= 3) recommendations.add(new QueryRecommendation("MANY_OPTIONALS", "WARNING", java.util.Map.of("count", stats.optionals)));
-        if (stats.unions >= 3) recommendations.add(new QueryRecommendation("MANY_UNIONS", "WARNING", java.util.Map.of("count", stats.unions)));
+        if (stats.optionals >= COMPLEXITY_WARNING_THRESHOLD) {
+            recommendations.add(new QueryRecommendation("MANY_OPTIONALS", "WARNING",
+                    java.util.Map.of("count", stats.optionals)));
+        }
+        if (stats.unions >= COMPLEXITY_WARNING_THRESHOLD) {
+            recommendations.add(new QueryRecommendation("MANY_UNIONS", "WARNING",
+                    java.util.Map.of("count", stats.unions)));
+        }
         if (stats.recursivePaths > 0) recommendations.add(new QueryRecommendation("RECURSIVE_PROPERTY_PATH", "WARNING", java.util.Map.of("count", stats.recursivePaths)));
         if (stats.cartesian) recommendations.add(new QueryRecommendation("CARTESIAN_PRODUCT", "CRITICAL"));
 

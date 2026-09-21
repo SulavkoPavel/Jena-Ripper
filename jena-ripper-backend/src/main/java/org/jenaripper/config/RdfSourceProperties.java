@@ -8,6 +8,7 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "jena-ripper.rdf-source")
 public record RdfSourceProperties(String type, String profileId, CimApi cimApi) {
     public static final String LOCAL_TDB2 = "LOCAL_TDB2";
+    public static final String FILE = "FILE";
     public static final String CIM_API = "CIM_API";
 
     public boolean remote() {

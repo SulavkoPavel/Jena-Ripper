@@ -6,7 +6,7 @@ import org.jenaripper.dto.RedisCommandRequest;
 import org.jenaripper.dto.RedisKeyRequest;
 import org.jenaripper.dto.RedisCommandResponse;
 import org.jenaripper.dto.RedisKeyResponse;
-import org.jenaripper.redis.RedisCommandException;
+import org.jenaripper.exception.RedisCommandException;
 import org.jenaripper.redis.RedisCommandExecutor;
 import org.jenaripper.redis.RedisCommandRegistry;
 import org.jenaripper.service.RedisCommandService;

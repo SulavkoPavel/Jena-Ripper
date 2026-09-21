@@ -4,7 +4,7 @@ server:
 
 jena-ripper:
   settings:
-    path: ${LOCALAPPDATA:${user.home}/AppData/Local}/JenaRipper/jena-ripper-settings.json
+    path: ${JENA_SETTINGS_PATH:}
 
 logging:
   file:

@@ -1,18 +1,22 @@
 package org.jenaripper.desktop;
 
 import org.jenaripper.JenaRipperApplication;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.web.context.WebServerApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
+@Slf4j
 public class ApplicationRestartService {
-    private static final Logger log = LoggerFactory.getLogger(ApplicationRestartService.class);
+    private static final long RESTART_DELAY_MS = 500;
 
     private final ConfigurableApplicationContext applicationContext;
     private final String[] sourceArguments;
@@ -34,15 +38,44 @@ public class ApplicationRestartService {
 
     private void restart() {
         try {
-            Thread.sleep(500);
-            log.info("Restarting Jena Ripper to apply the selected connection profile");
+            Thread.sleep(RESTART_DELAY_MS);
+            int serverPort = currentServerPort(applicationContext);
+            String[] restartArguments = withServerPort(sourceArguments, serverPort);
+            log.info("Перезапуск Jena Ripper для применения выбранного профиля подключения на порту {}", serverPort);
             applicationContext.close();
-            SpringApplication.run(JenaRipperApplication.class, sourceArguments);
+            SpringApplication.run(JenaRipperApplication.class, restartArguments);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            log.warn("Jena Ripper restart was interrupted");
+            log.warn("Перезапуск Jena Ripper был прерван");
         } catch (RuntimeException exception) {
-            log.error("Jena Ripper could not restart after applying the connection profile", exception);
+            log.error("Не удалось перезапустить Jena Ripper после применения профиля подключения", exception);
         }
+    }
+
+    static int currentServerPort(ApplicationContext context) {
+        if (context instanceof WebServerApplicationContext webApplicationContext) {
+            return webApplicationContext.getWebServer().getPort();
+        }
+        return 0;
+    }
+
+    static String[] withServerPort(String[] arguments, int serverPort) {
+        if (serverPort <= 0) return arguments.clone();
+        List<String> result = new ArrayList<>();
+        boolean skipPortValue = false;
+        for (String argument : arguments) {
+            if (skipPortValue) {
+                skipPortValue = false;
+                continue;
+            }
+            if ("--server.port".equals(argument)) {
+                skipPortValue = true;
+                continue;
+            }
+            if (argument.startsWith("--server.port=")) continue;
+            result.add(argument);
+        }
+        result.add("--server.port=" + serverPort);
+        return result.toArray(String[]::new);
     }
 }

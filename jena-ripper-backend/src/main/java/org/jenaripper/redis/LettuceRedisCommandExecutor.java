@@ -1,5 +1,7 @@
 package org.jenaripper.redis;
 
+import org.jenaripper.exception.RedisCommandException;
+
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.KeyValue;

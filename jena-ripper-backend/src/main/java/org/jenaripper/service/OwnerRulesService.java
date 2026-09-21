@@ -1,6 +1,7 @@
 package org.jenaripper.service;
 
 import org.apache.jena.rdf.model.ModelFactory;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.config.JenaRipperProperties;
 import org.jenaripper.config.RdfSourceProperties;
 import org.jenaripper.dto.OwnerRulesResponse;
@@ -10,6 +11,7 @@ import org.jenaripper.jena.JenaReadExecutor;
 import org.jenaripper.remote.CimApiClient;
 import org.jenaripper.owner.OwnerRulesResolver;
 import org.jenaripper.owner.OwnerResolution;
+import org.jenaripper.owner.OwnerRuleVocabulary;
 import org.jenaripper.dto.GraphNodeDto;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.rdf.model.Model;
@@ -18,30 +20,20 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.jenaripper.owner.OwnerRulesUnavailableException;
+import org.jenaripper.exception.OwnerRulesUnavailableException;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class OwnerRulesService {
+    private static final int REMOTE_OWNER_RESULT_LIMIT = 1_000;
+
     private final JenaReadExecutor executor;
     private final GraphService graphService;
     private final OwnerRulesResolver resolver;
     private final JenaRipperProperties properties;
     private final RdfSourceProperties source;
     private final CimApiClient cimApi;
-
-    public OwnerRulesService(
-            JenaReadExecutor executor,
-            GraphService graphService,
-            OwnerRulesResolver resolver, JenaRipperProperties properties,
-            RdfSourceProperties source, CimApiClient cimApi) {
-        this.executor = executor;
-        this.graphService = graphService;
-        this.resolver = resolver;
-        this.properties = properties;
-        this.source = source;
-        this.cimApi = cimApi;
-    }
 
     public OwnerRulesResponse resolve(String input) {
         if (source.remote()) return resolveRemote(input);
@@ -69,17 +61,11 @@ public class OwnerRulesService {
     private OwnerRulesResponse resolveRemote(String input) {
         String uri = graphService.resolveResource(input);
         long started = System.nanoTime();
-        String[] predicates = {
-                "http://so-ups.ru/2015/schema-cim16#Object.OwnersToBottom",
-                "http://so-ups.ru/2015/schema-cim16#Object.OwnersToTop",
-                "http://so-ups.ru/2015/schema-cim16#Object.DataSourceToBottom",
-                "http://so-ups.ru/2015/schema-cim16#Object.DataSourceToTop"
-        };
-        String values = java.util.Arrays.stream(predicates).map(value -> "<" + value + ">")
+        String values = OwnerRuleVocabulary.REMOTE_OWNER_PREDICATES.stream().map(value -> "<" + value + ">")
                 .collect(java.util.stream.Collectors.joining(" "));
         String query = "SELECT DISTINCT ?predicate ?owner WHERE { <" + uri + "> ?predicate ?owner " +
                 "VALUES ?predicate { " + values + " } }";
-        List<Map<String, String>> rows = cimApi.select(query, 1000, true);
+        List<Map<String, String>> rows = cimApi.select(query, REMOTE_OWNER_RESULT_LIMIT, true);
         LinkedHashMap<String, OwnerResourceDto> assetOwners = new LinkedHashMap<>();
         LinkedHashMap<String, OwnerResourceDto> dataSources = new LinkedHashMap<>();
         List<OwnerRuleDto> assetOwnerRules = new ArrayList<>();

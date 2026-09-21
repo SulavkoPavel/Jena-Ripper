@@ -15,8 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.jenaripper.remote.CimApiClient;
 import org.jenaripper.service.PrefixService;
-import org.jenaripper.service.SparqlQueryException;
+import org.jenaripper.exception.SparqlQueryException;
 import org.jenaripper.service.SparqlQueryService;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +34,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 @SpringBootTest(properties = {
         "jena-ripper.dataset.type=memory",
         "jena-ripper.dataset.path=unused",
+        "jena-ripper.rdf-source.type=LOCAL_TDB2",
         "jena-ripper.api.allowed-origins=http://localhost:[*]",
         "jena-ripper.graph.max-neighbors=100",
         "jena-ripper.api.search-limit=25",
@@ -56,6 +59,7 @@ class ApiIntegrationTest {
     @Autowired PrefixService prefixService;
     @Autowired SparqlQueryService sparqlQueryService;
     @Autowired ObjectMapper objectMapper;
+    @MockitoBean CimApiClient cimApiClient;
 
     @BeforeEach
     void loadGraph() {
@@ -320,14 +324,17 @@ class ApiIntegrationTest {
 
     @Test
     void managesConnectionProfilesWithoutExposingSecrets() throws Exception {
-        mvc.perform(get("/api/settings/connections/profiles"))
+        String initialJson = mvc.perform(get("/api/settings/connections/profiles"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.activeProfileId").value("default"))
+                .andExpect(jsonPath("$.activeProfileId").value(org.hamcrest.Matchers.matchesPattern(
+                        "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
                 .andExpect(jsonPath("$.profiles[0].name").value("Текущее подключение"))
-                .andExpect(jsonPath("$.profiles[0].postgres.password").doesNotExist());
+                .andExpect(jsonPath("$.profiles[0].postgres.password").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        String defaultProfileId = objectMapper.readTree(initialJson).path("activeProfileId").asText();
 
         String createBody = objectMapper.writeValueAsString(java.util.Map.of(
-                "name", "SIM2 Test", "copyCurrent", true, "sourceProfileId", "default"));
+                "name", "SIM2 Test", "copyCurrent", true, "sourceProfileId", defaultProfileId));
         String createdJson = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
                         "/api/settings/connections/profiles")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(createBody))
@@ -337,6 +344,23 @@ class ApiIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         String profileId = objectMapper.readTree(createdJson).path("profiles").get(1).path("id").asText();
 
+        Map<String, Object> inactiveSettings = java.util.Map.of(
+                "jena", java.util.Map.of("sourceType", "LOCAL_TDB2", "type", "MEMORY", "path", "unused"),
+                "postgres", java.util.Map.of("host", "localhost", "port", 5432, "database", "jena_ripper",
+                        "schema", "public", "username", "reader", "password", ""),
+                "redis", java.util.Map.of("host", "localhost", "port", 6379, "database", 0,
+                        "username", "", "password", "", "timeoutMs", 5000));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                        "/api/settings/connections/profiles/{id}", profileId)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inactiveSettings)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.restartRequired").value(false));
+        mvc.perform(get("/api/settings/connections/profiles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeProfileId").value(defaultProfileId))
+                .andExpect(jsonPath("$.profiles[1].version").value(2));
+
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
                         "/api/settings/connections/profiles/{id}/name", profileId)
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
@@ -345,7 +369,7 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.profiles[1].name").value("SIM2 Renamed"));
 
         String duplicateBody = objectMapper.writeValueAsString(java.util.Map.of(
-                "name", "SIM2 Renamed", "copyCurrent", true, "sourceProfileId", "default"));
+                "name", "SIM2 Renamed", "copyCurrent", true, "sourceProfileId", defaultProfileId));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
                         "/api/settings/connections/profiles")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(duplicateBody))
@@ -353,9 +377,56 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Профиль с таким названием уже существует."));
 
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(
-                        "/api/settings/connections/profiles/{id}", "default"))
+                        "/api/settings/connections/profiles/{id}", defaultProfileId))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("активный профиль")));
+    }
+
+    @Test
+    void exportsAndImportsProfilesWithVersionConflictResolution() throws Exception {
+        String initialJson = mvc.perform(get("/api/settings/connections/profiles"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String defaultProfileId = objectMapper.readTree(initialJson).path("activeProfileId").asText();
+        String createBody = objectMapper.writeValueAsString(java.util.Map.of(
+                "name", "DEV", "copyCurrent", true, "sourceProfileId", defaultProfileId));
+        String createdJson = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                        "/api/settings/connections/profiles")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(createBody))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profiles[1].version").value(1))
+                .andReturn().getResponse().getContentAsString();
+        String profileId = objectMapper.readTree(createdJson).path("profiles").get(1).path("id").asText();
+
+        String exported = mvc.perform(get("/api/settings/connections/profiles/export"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.formatVersion").value(1))
+                .andExpect(jsonPath("$.profiles.length()").value(2))
+                .andExpect(jsonPath("$.profiles[1].connections.postgres.password").exists())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode document = objectMapper.readTree(exported);
+        JsonNode importedProfile = document.path("profiles").get(1);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) importedProfile).put("version", 3);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) importedProfile.path("connections").path("redis"))
+                .put("host", "redis-dev.example");
+        Map<String, Object> previewRequest = java.util.Map.of("document", document, "decisions", java.util.Map.of());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                        "/api/settings/connections/profiles/import")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(previewRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.applied").value(false))
+                .andExpect(jsonPath("$.items[1].status").value("UPDATE"));
+
+        Map<String, Object> applyRequest = java.util.Map.of("document", document,
+                "decisions", java.util.Map.of(profileId, "UPDATE"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                        "/api/settings/connections/profiles/import")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(applyRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.applied").value(true))
+                .andExpect(jsonPath("$.updated").value(1))
+                .andExpect(jsonPath("$.profiles.profiles[1].version").value(3))
+                .andExpect(jsonPath("$.profiles.profiles[1].redis.host").value("redis-dev.example"));
     }
 
     @Test

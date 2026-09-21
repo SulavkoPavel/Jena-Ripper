@@ -1,6 +1,7 @@
 package org.jenaripper.service;
 
 import org.apache.jena.sparql.core.Quad;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.config.JenaRipperProperties;
 import org.jenaripper.dto.GraphEdgeDto;
 import org.jenaripper.dto.GraphNodeDto;
@@ -20,22 +21,13 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class GraphService {
+    private static final int AMBIGUITY_DETECTION_LIMIT = 2;
     private final GraphDataSource repository;
     private final GraphMapper mapper;
     private final PrefixService prefixService;
     private final JenaRipperProperties properties;
-
-    public GraphService(
-            GraphDataSource repository,
-            GraphMapper mapper,
-            PrefixService prefixService,
-            JenaRipperProperties properties) {
-        this.repository = repository;
-        this.mapper = mapper;
-        this.prefixService = prefixService;
-        this.properties = properties;
-    }
 
     public GraphNodeDto node(String resource) {
         String uri = resolveResource(resource);
@@ -100,7 +92,7 @@ public class GraphService {
         if (isAbsoluteUri(input) && repository.resourceExists(expanded)) uris.add(expanded);
         if (compactSubject) uris.add(expanded);
         if (!isAbsoluteUri(input) && !compactSubject) {
-            uris.addAll(repository.findByLocalPart(stripLeadingUnderscore(input), 2));
+            uris.addAll(repository.findByLocalPart(stripLeadingUnderscore(input), AMBIGUITY_DETECTION_LIMIT));
         }
         boolean directIdentifier = isAbsoluteUri(input)
                 || input.matches("_?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
@@ -123,7 +115,8 @@ public class GraphService {
             if (repository.resourceExists(expanded)) return expanded;
             throw new IllegalArgumentException("RDF resource не найден: " + value);
         }
-        List<String> matches = repository.findByLocalPart(stripLeadingUnderscore(value), 2);
+        List<String> matches = repository.findByLocalPart(
+                stripLeadingUnderscore(value), AMBIGUITY_DETECTION_LIMIT);
         if (matches.isEmpty()) throw new IllegalArgumentException("RDF resource не найден: " + value);
         if (matches.size() > 1) throw new IllegalArgumentException("Идентификатор неоднозначен; укажите compact или полный URI");
         return matches.get(0);

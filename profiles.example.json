@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "exportedAt": "2026-01-01T00:00:00Z",
+  "profiles": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "LOCAL",
+      "version": 1,
+      "updatedAt": "2026-01-01T00:00:00Z",
+      "connections": {
+        "jena": {
+          "sourceType": "LOCAL_TDB2",
+          "type": "tdb2",
+          "path": "",
+          "cimApi": null,
+          "uploadedModelId": null
+        },
+        "postgres": {
+          "host": "",
+          "port": 5432,
+          "database": "",
+          "schema": "public",
+          "username": "",
+          "password": ""
+        },
+        "redis": {
+          "host": "",
+          "port": 6379,
+          "database": 0,
+          "username": "",
+          "password": "",
+          "timeoutMs": 5000
+        }
+      }
+    }
+  ]
+}

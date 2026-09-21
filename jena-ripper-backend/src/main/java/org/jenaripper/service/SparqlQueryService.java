@@ -17,7 +17,8 @@ import org.apache.jena.update.UpdateFactory;
 import org.jenaripper.config.JenaRipperProperties;
 import org.jenaripper.config.RdfSourceProperties;
 import org.jenaripper.remote.CimApiClient;
-import org.jenaripper.remote.CimApiException;
+import org.jenaripper.exception.CimApiException;
+import org.jenaripper.exception.SparqlQueryException;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
@@ -50,6 +51,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class SparqlQueryService {
+    private static final List<Long> DEFAULT_SPEED_THRESHOLDS_MS =
+            List.of(100L, 500L, 2_000L, 10_000L);
+    private static final int VERY_FAST_THRESHOLD_INDEX = 0;
+    private static final int FAST_THRESHOLD_INDEX = 1;
+    private static final int MEDIUM_THRESHOLD_INDEX = 2;
+    private static final int SLOW_THRESHOLD_INDEX = 3;
     private final JenaReadExecutor executor;
     private final PrefixService prefixes;
     private final GraphMapper graphMapper;
@@ -381,11 +388,13 @@ public class SparqlQueryService {
 
     private String speed(long totalMs) {
         List<Long> thresholds = settings.speedThresholdsMs();
-        if (thresholds == null || thresholds.size() < 4) thresholds = List.of(100L, 500L, 2_000L, 10_000L);
-        if (totalMs < thresholds.get(0)) return "VERY_FAST";
-        if (totalMs < thresholds.get(1)) return "FAST";
-        if (totalMs < thresholds.get(2)) return "MEDIUM";
-        if (totalMs < thresholds.get(3)) return "SLOW";
+        if (thresholds == null || thresholds.size() < DEFAULT_SPEED_THRESHOLDS_MS.size()) {
+            thresholds = DEFAULT_SPEED_THRESHOLDS_MS;
+        }
+        if (totalMs < thresholds.get(VERY_FAST_THRESHOLD_INDEX)) return "VERY_FAST";
+        if (totalMs < thresholds.get(FAST_THRESHOLD_INDEX)) return "FAST";
+        if (totalMs < thresholds.get(MEDIUM_THRESHOLD_INDEX)) return "MEDIUM";
+        if (totalMs < thresholds.get(SLOW_THRESHOLD_INDEX)) return "SLOW";
         return "VERY_SLOW";
     }
 

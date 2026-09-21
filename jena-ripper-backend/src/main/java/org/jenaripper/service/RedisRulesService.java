@@ -9,7 +9,7 @@ import org.jenaripper.dto.RedisRulesResponse;
 import org.jenaripper.dto.GraphNodeDto;
 import org.jenaripper.redis.RedisPermissionKeyFactory;
 import org.jenaripper.redis.RedisPermissionReader;
-import org.jenaripper.redis.RedisRulesUnavailableException;
+import org.jenaripper.exception.RedisRulesUnavailableException;
 import org.jenaripper.remote.CimApiClient;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +44,8 @@ public class RedisRulesService {
 
     public RedisRulesService(RedisPermissionReader reader, GraphService graphService, PrefixService prefixService,
                              JenaRipperProperties properties) {
-        this(reader, graphService, prefixService, properties, new RdfSourceProperties("LOCAL_TDB2", null), null);
+        this(reader, graphService, prefixService, properties,
+                new RdfSourceProperties(RdfSourceProperties.LOCAL_TDB2, null), null);
     }
 
     public RedisRulesResponse inspect(String input) {
@@ -89,7 +90,7 @@ public class RedisRulesService {
             if (allowed) write.add(companyId);
         }
 
-        if ("PIM_DIFF".equalsIgnoreCase(config.modelType())) {
+        if (RedisPermissionKeyFactory.PIM_DIFF_MODEL_TYPE.equalsIgnoreCase(config.modelType())) {
             Set<String> reverseRead = reverseMembers(raw, config, objectId, RedisPermissionKeyFactory.READ, "REVERSE READ");
             Set<String> reverseTop = reverseMembers(raw, config, objectId, RedisPermissionKeyFactory.READ_TOP, "REVERSE READ TOP");
             read.removeAll(reverseRead);

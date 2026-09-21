@@ -1,7 +1,9 @@
 package org.jenaripper.desktop;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,19 +12,17 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.InetAddress;
 
 @RestController
-@RequestMapping("/api/application")
+@RequestMapping(ApplicationApiPaths.BASE)
+@RequiredArgsConstructor
 public class ApplicationRestartController {
     private final ApplicationRestartService restartService;
-
-    public ApplicationRestartController(ApplicationRestartService restartService) {
-        this.restartService = restartService;
-    }
 
     @PostMapping("/restart")
     public ResponseEntity<RestartResponse> restart(HttpServletRequest request) {
         if (!isLoopback(request.getRemoteAddr())
-                || !"ui".equals(request.getHeader("X-Jena-Ripper-Restart"))
-                || !isLoopbackOrigin(request.getHeader("Origin"))) {
+                || !ApplicationApiPaths.UI_REQUEST_HEADER_VALUE.equals(
+                        request.getHeader(ApplicationApiPaths.RESTART_REQUEST_HEADER))
+                || !isLoopbackOrigin(request.getHeader(HttpHeaders.ORIGIN))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(new RestartResponse(false, "Restart доступен только с localhost."));
         }

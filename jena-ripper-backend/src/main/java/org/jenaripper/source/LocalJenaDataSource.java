@@ -1,5 +1,6 @@
 package org.jenaripper.source;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.sparql.core.Quad;
 import org.jenaripper.jena.JenaGraphRepository;
 import org.springframework.stereotype.Component;
@@ -7,10 +8,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class LocalJenaDataSource implements GraphDataSource {
     private final JenaGraphRepository repository;
 
-    public LocalJenaDataSource(JenaGraphRepository repository) { this.repository = repository; }
     public List<Quad> outgoing(String uri, int limit) { return repository.outgoing(uri, limit); }
     public List<Quad> outgoingRelations(String uri, int limit) { return repository.outgoingRelations(uri, limit); }
     public List<Quad> incoming(String uri, int limit) { return repository.incoming(uri, limit); }

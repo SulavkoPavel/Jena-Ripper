@@ -1,6 +1,7 @@
 package org.jenaripper.controller;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.dto.SparqlQueryRequest;
 import org.jenaripper.dto.SparqlQueryResponse;
 import org.jenaripper.dto.SparqlAnalyzeResponse;
@@ -20,14 +21,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sparql")
+@RequiredArgsConstructor
 public class SparqlController {
     private final SparqlQueryService service;
     private final SparqlBenchmarkService benchmarkService;
-
-    public SparqlController(SparqlQueryService service, SparqlBenchmarkService benchmarkService) {
-        this.service = service;
-        this.benchmarkService = benchmarkService;
-    }
 
     @PostMapping("/query")
     public SparqlQueryResponse query(@Valid @RequestBody SparqlQueryRequest request) {

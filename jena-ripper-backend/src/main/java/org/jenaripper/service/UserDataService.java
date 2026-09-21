@@ -1,6 +1,7 @@
 package org.jenaripper.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.dto.UserDataDto;
 import org.jenaripper.settings.UserDataRepository;
 import org.springframework.stereotype.Service;
@@ -12,16 +13,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
+@RequiredArgsConstructor
 public class UserDataService {
     private static final int SPARQL_TEMPLATE_LIMIT = 100;
     private static final int REDIS_TEMPLATE_LIMIT = 50;
     private static final int HISTORY_LIMIT = 20;
 
     private final UserDataRepository repository;
-
-    public UserDataService(UserDataRepository repository) {
-        this.repository = repository;
-    }
 
     public synchronized UserDataDto current() {
         return repository.current();

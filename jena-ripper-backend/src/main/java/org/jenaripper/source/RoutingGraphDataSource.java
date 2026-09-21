@@ -1,5 +1,6 @@
 package org.jenaripper.source;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.sparql.core.Quad;
 import org.jenaripper.config.RdfSourceProperties;
 import org.springframework.context.annotation.Primary;
@@ -9,16 +10,11 @@ import java.util.List;
 
 @Primary
 @Component
+@RequiredArgsConstructor
 public class RoutingGraphDataSource implements GraphDataSource {
     private final LocalJenaDataSource local;
     private final CimApiGraphDataSource remote;
     private final RdfSourceProperties properties;
-
-    public RoutingGraphDataSource(LocalJenaDataSource local, CimApiGraphDataSource remote, RdfSourceProperties properties) {
-        this.local = local;
-        this.remote = remote;
-        this.properties = properties;
-    }
 
     private GraphDataSource active() {
         return properties.remote() ? remote : local;

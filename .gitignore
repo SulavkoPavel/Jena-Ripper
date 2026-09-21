@@ -14,3 +14,7 @@ backend/target/generated-resources/
 .idea/
 *.iml
 *.log
+profiles.json
+**/profiles.json
+jena-ripper-settings.json
+**/jena-ripper-settings.json

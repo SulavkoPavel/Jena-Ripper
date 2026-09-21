@@ -1,5 +1,6 @@
 package org.jenaripper.redis;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -9,12 +10,9 @@ import java.util.Set;
 
 @Component
 @Primary
+@RequiredArgsConstructor
 public class RoutingRedisCommandExecutor implements RedisCommandExecutor {
     private final LettuceRedisCommandExecutor local;
-
-    public RoutingRedisCommandExecutor(LettuceRedisCommandExecutor local) {
-        this.local = local;
-    }
 
     private RedisCommandExecutor delegate() { return local; }
     @Override public Set<String> smembers(String key) { return delegate().smembers(key); }

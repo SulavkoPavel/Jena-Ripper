@@ -1,7 +1,6 @@
 package org.jenaripper.desktop;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.context.WebServerApplicationContext;
 import org.springframework.context.annotation.Profile;
@@ -14,8 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Profile("desktop")
+@Slf4j
 public class DesktopBrowserLauncher {
-    private static final Logger log = LoggerFactory.getLogger(DesktopBrowserLauncher.class);
     private static final AtomicBoolean OPENED = new AtomicBoolean();
 
     @EventListener(ApplicationReadyEvent.class)
@@ -23,15 +22,15 @@ public class DesktopBrowserLauncher {
         if (!OPENED.compareAndSet(false, true)) return;
         if (!(event.getApplicationContext() instanceof WebServerApplicationContext context)) return;
         URI uri = URI.create("http://127.0.0.1:" + context.getWebServer().getPort() + "/");
-        log.info("Jena Ripper started: {}", uri);
+        log.info("Jena Ripper запущен: {}", uri);
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(uri);
             } else {
-                log.warn("Default browser is unavailable. Open Jena Ripper manually: {}", uri);
+                log.warn("Браузер по умолчанию недоступен. Откройте Jena Ripper вручную: {}", uri);
             }
         } catch (Exception exception) {
-            log.warn("Could not open the default browser. Open Jena Ripper manually: {}", uri);
+            log.warn("Не удалось открыть браузер по умолчанию. Откройте Jena Ripper вручную: {}", uri);
         }
     }
 }

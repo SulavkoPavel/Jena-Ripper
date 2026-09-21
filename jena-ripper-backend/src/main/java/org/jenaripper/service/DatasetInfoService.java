@@ -2,6 +2,7 @@ package org.jenaripper.service;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.sparql.core.Quad;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.config.JenaRipperProperties;
 import org.jenaripper.config.RdfSourceProperties;
 import org.jenaripper.config.DatasetRuntimeState;
@@ -19,21 +20,14 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
-public class DatasetInfoService {
+@RequiredArgsConstructor
+public class
+DatasetInfoService {
     private final JenaReadExecutor executor;
     private final JenaRipperProperties properties;
     private final RdfSourceProperties source;
     private final CimApiClient cimApi;
     private final DatasetRuntimeState runtimeState;
-
-    public DatasetInfoService(JenaReadExecutor executor, JenaRipperProperties properties,
-                              RdfSourceProperties source, CimApiClient cimApi, DatasetRuntimeState runtimeState) {
-        this.executor = executor;
-        this.properties = properties;
-        this.source = source;
-        this.cimApi = cimApi;
-        this.runtimeState = runtimeState;
-    }
 
     public DatasetInfoDto info() {
         if (source.remote()) {
@@ -42,7 +36,8 @@ public class DatasetInfoService {
                 List<Map<String, String>> rows = cimApi.select("SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }", 1, false);
                 if (!rows.isEmpty()) count = Long.parseLong(rows.get(0).getOrDefault("count", "0"));
             } catch (NumberFormatException ignored) { }
-            return new DatasetInfoDto("CIM_API", source.cimApi().modelName(), count, java.util.List.of());
+            return new DatasetInfoDto(RdfSourceProperties.CIM_API, source.cimApi().modelName(), count,
+                    java.util.List.of());
         }
         return executor.read(() -> {
             long count = 0;
@@ -57,7 +52,8 @@ public class DatasetInfoService {
             JenaRipperProperties.Dataset config = properties.dataset();
             String path = "tdb2".equalsIgnoreCase(config.type())
                     ? Path.of(config.path()).toAbsolutePath().normalize().toString() : null;
-            return new DatasetInfoDto(config.type(), path, count, names.stream().toList());
+            String type = RdfSourceProperties.FILE.equalsIgnoreCase(source.type()) ? RdfSourceProperties.FILE : config.type();
+            return new DatasetInfoDto(type, path, count, names.stream().toList());
         });
     }
 
@@ -72,8 +68,9 @@ public class DatasetInfoService {
             boolean redisAvailable = redis != null && redis.enabled()
                     && redis.host() != null && !redis.host().isBlank() && redis.port() > 0;
             return new DatasetStatusDto(available ? "UP" : "DOWN",
-                    new DatasetStatusDto.DatasetStateDto("CIM_API", label, available),
-                    new DatasetStatusDto.FeaturesDto(true, true, redisAvailable, true, true, "CIM_API",
+                    new DatasetStatusDto.DatasetStateDto(RdfSourceProperties.CIM_API, label, available),
+                    new DatasetStatusDto.FeaturesDto(true, true, redisAvailable, true, true,
+                            RdfSourceProperties.CIM_API,
                             redisAvailable, source.profileId()));
         }
         JenaRipperProperties.Dataset config = properties.dataset();
@@ -87,13 +84,15 @@ public class DatasetInfoService {
         }
         return new DatasetStatusDto(
                 available ? "UP" : "DOWN",
-                new DatasetStatusDto.DatasetStateDto(config.type().toUpperCase(), path, available, runtimeState.error()),
+                new DatasetStatusDto.DatasetStateDto(
+                        RdfSourceProperties.FILE.equalsIgnoreCase(source.type()) ? RdfSourceProperties.FILE : config.type().toUpperCase(),
+                        path, available, runtimeState.error()),
                 new DatasetStatusDto.FeaturesDto(true,
                         properties.ownerRules() != null && properties.ownerRules().enabled(),
                         properties.redisRules() != null && properties.redisRules().enabled(),
                         true,
                         properties.ownerRules() != null && properties.ownerRules().enabled(),
-                        "LOCAL_TDB2",
+                        RdfSourceProperties.FILE.equalsIgnoreCase(source.type()) ? RdfSourceProperties.FILE : RdfSourceProperties.LOCAL_TDB2,
                         properties.redisRules() != null && properties.redisRules().enabled(),
                         source.profileId()));
     }

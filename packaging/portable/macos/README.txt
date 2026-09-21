@@ -6,7 +6,6 @@ Jena Ripper — portable-версия для macOS
 
 Jena Ripper — локальный инструмент для исследования RDF-графов Apache Jena.
 В архив уже включены backend, frontend и Java Runtime для архитектуры вашего Mac.
-Устанавливать Java, Node.js, npm или Maven аналитику не требуется.
 
 Как запустить
 ------------
@@ -43,11 +42,11 @@ Jena Ripper started: http://127.0.0.1:xxxxx/
 Настройки и профили
 -------------------
 
-~/Library/Application Support/JenaRipper/jena-ripper-settings.json
+~/.jena-ripper/profiles.json
 
 Пользовательские шаблоны и история SPARQL/Redis:
 
-~/Library/Application Support/JenaRipper/jena-ripper-user-data.json
+~/.jena-ripper/jena-ripper-user-data.json
 
 Настройки находятся вне распакованного архива, поэтому обновление portable-версии
 не удаляет профили подключений.

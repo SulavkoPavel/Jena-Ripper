@@ -1,9 +1,11 @@
 package org.jenaripper.owner;
 
+import org.jenaripper.exception.OwnerRulesUnavailableException;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jenaripper.config.JenaRipperProperties;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
-@Component
+@Repository
 public class PostgresOwnerMetadataSource implements OwnerMetadataSource {
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
 

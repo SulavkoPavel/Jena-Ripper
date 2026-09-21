@@ -1,17 +1,15 @@
 package org.jenaripper.owner;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.reasoner.rulesys.GenericRuleReasoner;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class OwnerRulesModelReasoner {
     private final OwnerRuleGenerator ruleGenerator;
-
-    public OwnerRulesModelReasoner(OwnerRuleGenerator ruleGenerator) {
-        this.ruleGenerator = ruleGenerator;
-    }
 
     public Model apply(Model model) {
         OwnerRuleBundle rules = ruleGenerator.rules();

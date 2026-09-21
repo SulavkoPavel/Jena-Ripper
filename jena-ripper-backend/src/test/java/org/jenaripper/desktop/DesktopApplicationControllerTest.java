@@ -13,9 +13,12 @@ class DesktopApplicationControllerTest {
     @Test
     void exposesDesktopRuntime() {
         DesktopApplicationController controller = new DesktopApplicationController(mock(ConfigurableApplicationContext.class));
+        String instanceId = controller.runtime().instanceId();
 
         assertThat(controller.runtime().mode()).isEqualTo("desktop");
         assertThat(controller.runtime().shutdownAvailable()).isTrue();
+        assertThat(instanceId).isNotBlank();
+        assertThat(controller.runtime().instanceId()).isEqualTo(instanceId);
     }
 
     @Test

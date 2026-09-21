@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.jenaripper.remote.CimApiClient;
-import org.jenaripper.remote.CimApiException;
+import org.jenaripper.exception.CimApiException;
 import org.jenaripper.settings.StoredConnectionSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,8 +19,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CimApiClientTest {
     private HttpServer server;
+    private HttpServer authServer;
 
-    @AfterEach void stop() { if (server != null) server.stop(0); }
+    @AfterEach void stop() {
+        if (server != null) server.stop(0);
+        if (authServer != null) authServer.stop(0);
+    }
 
     @Test void enablesUntrustedCertificateModeByDefaultForNewSettings() {
         StoredConnectionSettings.CimApi settings = new StoredConnectionSettings.CimApi("https://cim.example.test", "client", "secret",
@@ -65,6 +69,62 @@ class CimApiClientTest {
         assertThatThrownBy(() -> client("wrong", null).models())
                 .isInstanceOfSatisfying(CimApiException.class,
                         error -> assertThat(error.type()).isEqualTo("CIM_API_AUTH_FAILED"));
+    }
+
+    @Test void loadsMetamodelWithEmbeddedAssociations() throws Exception {
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/oauth/token", exchange -> respond(exchange, 200,
+                "{\"accessToken\":\"access\",\"expiresIn\":900}"));
+        server.createContext("/api/core/metamodel/metamodels", exchange -> {
+            assertThat(exchange.getRequestHeaders().getFirst("Authorization")).isEqualTo("Bearer access");
+            assertThat(exchange.getRequestURI().getQuery()).isEqualTo("simple=false");
+            respond(exchange, 200, "[{\"id\":\"cim:PowerTransformer\",\"label\":\"Transformer\"," +
+                    "\"parents\":[],\"children\":[],\"associations\":[{" +
+                    "\"id\":42,\"name\":\"cim:PowerTransformer.End\"," +
+                    "\"range\":\"cim:PowerTransformerEnd\",\"ranges\":[\"cim:PowerTransformerEnd\"]," +
+                    "\"rangesNeed\":[{\"range\":\"cim:PowerTransformerEnd\",\"need\":1}]}]}]");
+        });
+        server.start();
+
+        assertThat(client("secret", 42L).metamodelClasses()).singleElement().satisfies(metamodelClass -> {
+            assertThat(metamodelClass.id()).isEqualTo("cim:PowerTransformer");
+            assertThat(metamodelClass.associations()).singleElement().satisfies(association -> {
+                assertThat(association.id()).isEqualTo(42L);
+                assertThat(association.ranges()).containsExactly("cim:PowerTransformerEnd");
+                assertThat(association.rangesNeed()).singleElement()
+                        .satisfies(need -> assertThat(need.need()).isEqualTo(1L));
+            });
+        });
+    }
+
+    @Test void loadsMetamodelThroughBusinessGatewayWhenAuthUrlDiffers() throws Exception {
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/api/core/metamodel/metamodels", exchange -> {
+            assertThat(exchange.getRequestHeaders().getFirst("Authorization")).isEqualTo("Bearer access");
+            assertThat(exchange.getRequestURI().getQuery()).isEqualTo("simple=false");
+            respond(exchange, 200, "[{\"id\":\"cim:Substation\",\"label\":\"Substation\"}]");
+        });
+        server.createContext("/api/core/metamodel/classes/", exchange -> {
+            assertThat(exchange.getRequestHeaders().getFirst("Authorization")).isEqualTo("Bearer access");
+            assertThat(exchange.getRequestURI().getRawPath()).endsWith("/cim%3ASubstation");
+            respond(exchange, 200, "{\"id\":\"cim:Substation\",\"label\":\"Substation\"}");
+        });
+        server.start();
+        authServer = HttpServer.create(new InetSocketAddress(0), 0);
+        authServer.createContext("/oauth/token", exchange -> respond(exchange, 200,
+                "{\"accessToken\":\"access\",\"expiresIn\":900}"));
+        authServer.start();
+
+        String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
+        String authBaseUrl = "http://127.0.0.1:" + authServer.getAddress().getPort();
+        StoredConnectionSettings.CimApi settings = new StoredConnectionSettings.CimApi(
+                baseUrl, authBaseUrl, "client", "secret", 42L, "SIM2", 1000, 1000);
+
+        CimApiClient client = CimApiClient.forSettings(new ObjectMapper(), settings);
+        assertThat(client.metamodelClasses())
+                .singleElement()
+                .satisfies(metamodelClass -> assertThat(metamodelClass.id()).isEqualTo("cim:Substation"));
+        assertThat(client.metamodelClass("cim:Substation").id()).isEqualTo("cim:Substation");
     }
 
     @Test void reportsExactMissingBusinessEndpoint() throws Exception {

@@ -1,8 +1,15 @@
 package org.jenaripper.settings;
 
+import org.jenaripper.config.RdfSourceProperties;
+
 public record StoredConnectionSettings(Jena jena, Postgres postgres, Redis redis) {
-    public record Jena(String sourceType, String type, String path, CimApi cimApi) {
-        public Jena(String type, String path) { this("LOCAL_TDB2", type, path, null); }
+    public record Jena(String sourceType, String type, String path, CimApi cimApi, String uploadedModelId) {
+        public Jena(String type, String path) {
+            this(RdfSourceProperties.LOCAL_TDB2, type, path, null, null);
+        }
+        public Jena(String sourceType, String type, String path, CimApi cimApi) {
+            this(sourceType, type, path, cimApi, null);
+        }
     }
     public record CimApi(String baseUrl, String authBaseUrl, String username, String password, Long modelId, String modelName,
                          long connectTimeoutMs, long readTimeoutMs, boolean trustUntrustedCertificates) {

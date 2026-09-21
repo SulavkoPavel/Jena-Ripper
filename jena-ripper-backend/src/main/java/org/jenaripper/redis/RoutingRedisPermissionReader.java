@@ -1,5 +1,9 @@
 package org.jenaripper.redis;
 
+import lombok.RequiredArgsConstructor;
+import org.jenaripper.exception.RedisCommandException;
+import org.jenaripper.exception.RedisRulesUnavailableException;
+
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -7,12 +11,9 @@ import java.util.Set;
 
 @Component
 @Primary
+@RequiredArgsConstructor
 public class RoutingRedisPermissionReader implements RedisPermissionReader {
     private final LettuceRedisPermissionReader local;
-
-    public RoutingRedisPermissionReader(LettuceRedisPermissionReader local) {
-        this.local = local;
-    }
 
     @Override public Set<String> members(String key) {
         try { return local.members(key); }

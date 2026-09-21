@@ -5,8 +5,7 @@ Jena Ripper — portable-версия для Windows
 -------------
 
 Jena Ripper — локальный инструмент для исследования RDF-графов Apache Jena.
-В архив уже включены backend, frontend и Java Runtime. Устанавливать Java,
-Node.js, npm или Maven на компьютер аналитика не требуется.
+В архив уже включены backend, frontend и Java Runtime.
 
 Как запустить
 ------------
@@ -56,11 +55,11 @@ Jena Ripper started: http://127.0.0.1:xxxxx/
 
 Настройки не хранятся внутри распакованного архива. Они сохраняются здесь:
 
-%LOCALAPPDATA%\JenaRipper\jena-ripper-settings.json
+%APPDATA%\jena-ripper\profiles.json
 
 Пользовательские шаблоны и история SPARQL/Redis сохраняются отдельно:
 
-%LOCALAPPDATA%\JenaRipper\jena-ripper-user-data.json
+%APPDATA%\jena-ripper\jena-ripper-user-data.json
 
 Поэтому архив можно перемещать или заменять новой версией без потери профилей.
 

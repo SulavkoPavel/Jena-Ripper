@@ -1,5 +1,6 @@
 package org.jenaripper.jena;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ParameterizedSparqlString;
@@ -15,12 +16,9 @@ import java.util.Iterator;
 import java.util.List;
 
 @Repository
+@RequiredArgsConstructor
 public class JenaGraphRepository {
     private final JenaReadExecutor executor;
-
-    public JenaGraphRepository(JenaReadExecutor executor) {
-        this.executor = executor;
-    }
 
     public List<Quad> outgoing(String uri, int limit) {
         return executor.read(() -> collect(executor.dataset().asDatasetGraph()
@@ -97,7 +95,7 @@ public class JenaGraphRepository {
                              (BOUND(?type) && CONTAINS(LCASE(STR(?type)), LCASE(?term))))
                     } ORDER BY STR(?resource) LIMIT %d
                     """.formatted(values, limit));
-            sparql.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+            sparql.setNsPrefix("rdf", RDF.getURI());
             sparql.setLiteral("term", query);
             return selectUris(sparql);
         });

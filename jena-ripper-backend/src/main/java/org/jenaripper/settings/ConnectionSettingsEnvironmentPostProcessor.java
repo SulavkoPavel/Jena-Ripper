@@ -20,13 +20,11 @@ public class ConnectionSettingsEnvironmentPostProcessor implements EnvironmentPo
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         if (!environment.getProperty("jena-ripper.settings.overrides-enabled", Boolean.class, true)) return;
         String configured = environment.getProperty("jena-ripper.settings.path");
-        Path path = configured == null || configured.isBlank()
-                ? Path.of(System.getProperty("user.home"), ".jena-ripper", "jena-ripper-settings.json")
-                : Path.of(configured);
-        migrateLegacyDesktopSettings(environment, path);
+        Path path = ConnectionProfilePaths.resolve(configured);
+        migrateLegacySettings(path);
         if (!Files.isRegularFile(path)) return;
         try {
-            ObjectMapper mapper = new ObjectMapper();
+            ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
             JsonNode root = mapper.readTree(path.toFile());
             StoredConnectionSettings stored;
             if (root.has("profiles")) {
@@ -60,6 +58,14 @@ public class ConnectionSettingsEnvironmentPostProcessor implements EnvironmentPo
                     values.put("jena-ripper.rdf-source.cim-api.connect-timeout", cim.connectTimeoutMs() + "ms");
                     values.put("jena-ripper.rdf-source.cim-api.read-timeout", cim.readTimeoutMs() + "ms");
                     values.put("jena-ripper.rdf-source.cim-api.trust-untrusted-certificates", cim.trustUntrustedCertificates());
+                } else if (RdfSourceProperties.FILE.equalsIgnoreCase(sourceType)
+                        && stored.jena().uploadedModelId() != null && !stored.jena().uploadedModelId().isBlank()) {
+                    Path modelDataset = path.toAbsolutePath().normalize().getParent()
+                            .resolve(ConnectionProfilePaths.UPLOADED_MODELS_DIRECTORY)
+                            .resolve(stored.jena().uploadedModelId())
+                            .resolve(ConnectionProfilePaths.MODEL_DATASET_DIRECTORY);
+                    values.put("jena-ripper.dataset.type", "tdb2");
+                    values.put("jena-ripper.dataset.path", modelDataset.toString());
                 } else {
                     values.put("jena-ripper.dataset.type", stored.jena().type());
                     values.put("jena-ripper.dataset.path", stored.jena().path());
@@ -94,15 +100,23 @@ public class ConnectionSettingsEnvironmentPostProcessor implements EnvironmentPo
         return Ordered.LOWEST_PRECEDENCE;
     }
 
-    private static void migrateLegacyDesktopSettings(ConfigurableEnvironment environment, Path target) {
-        if (!environment.matchesProfiles("desktop") || Files.exists(target)) return;
-        Path legacy = Path.of(System.getProperty("user.home"), ".jena-ripper", "jena-ripper-settings.json");
-        if (!Files.isRegularFile(legacy) || legacy.equals(target)) return;
-        try {
-            Files.createDirectories(target.getParent());
-            Files.copy(legacy, target, StandardCopyOption.COPY_ATTRIBUTES);
-        } catch (Exception ignored) {
-            // A failed migration must not prevent desktop startup; defaults remain available.
+    private static void migrateLegacySettings(Path target) {
+        if (Files.exists(target)) return;
+        java.util.List<Path> candidates = new java.util.ArrayList<>();
+        candidates.add(Path.of(System.getProperty("user.home"), ".jena-ripper", "jena-ripper-settings.json"));
+        String localAppData = System.getenv("LOCALAPPDATA");
+        if (localAppData != null && !localAppData.isBlank()) {
+            candidates.add(Path.of(localAppData, "JenaRipper", "jena-ripper-settings.json"));
+        }
+        for (Path legacy : candidates) {
+            if (!Files.isRegularFile(legacy) || legacy.equals(target)) continue;
+            try {
+                Files.createDirectories(target.getParent());
+                Files.copy(legacy, target, StandardCopyOption.COPY_ATTRIBUTES);
+                return;
+            } catch (Exception ignored) {
+                // A failed migration must not prevent startup; defaults remain available.
+            }
         }
     }
 }

@@ -2,8 +2,10 @@ package org.jenaripper.redis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.remote.CimApiClient;
-import org.jenaripper.remote.CimApiException;
+import org.jenaripper.exception.CimApiException;
+import org.jenaripper.exception.RedisCommandException;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
@@ -13,14 +15,10 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
+@RequiredArgsConstructor
 public class CimApiRedisCommandExecutor implements RedisCommandExecutor {
     private final CimApiClient client;
     private final ObjectMapper mapper;
-
-    public CimApiRedisCommandExecutor(CimApiClient client, ObjectMapper mapper) {
-        this.client = client;
-        this.mapper = mapper;
-    }
 
     @Override public Set<String> smembers(String key) { return new LinkedHashSet<>(strings(result("SMEMBERS", List.of(key)).value())); }
     @Override public boolean sismember(String key, String member) { return result("SISMEMBER", List.of(key, member)).value().asBoolean(); }

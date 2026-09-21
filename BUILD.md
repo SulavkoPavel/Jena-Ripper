@@ -67,9 +67,9 @@ Portable Windows and macOS packaging uses `jlink` and ZIP only. It does not use 
 Portable settings and logs are outside the extracted directory:
 
 ```text
-Windows settings: %LOCALAPPDATA%\JenaRipper\jena-ripper-settings.json
+Windows settings: %APPDATA%\jena-ripper\profiles.json
 Windows logs:     %LOCALAPPDATA%\JenaRipper\logs\jena-ripper.log
-macOS settings:   ~/Library/Application Support/JenaRipper/jena-ripper-settings.json
+macOS settings:   ~/.jena-ripper/profiles.json
 macOS logs:       ~/Library/Logs/JenaRipper/jena-ripper.log
 ```
 
@@ -98,4 +98,4 @@ release/
 
 The desktop launcher enables the `desktop` Spring profile. It binds only to `127.0.0.1`, selects a free port, logs the final URL, and opens that URL once after Spring Boot is ready.
 
-Desktop connection profiles are stored in `%LOCALAPPDATA%\JenaRipper\jena-ripper-settings.json`; the legacy `%USERPROFILE%\.jena-ripper\jena-ripper-settings.json` is copied once when the desktop file does not yet exist. Logs are written to `%LOCALAPPDATA%\JenaRipper\logs\jena-ripper.log`.
+Desktop connection profiles are stored in `%APPDATA%\jena-ripper\profiles.json` on Windows and `~/.jena-ripper/profiles.json` on macOS/Linux. A legacy `jena-ripper-settings.json` is copied once when the new file does not yet exist. Logs remain outside the project directory.

@@ -1,6 +1,7 @@
 package org.jenaripper.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.dto.UserDataDto;
 import org.jenaripper.service.UserDataService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,12 +16,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/user-data")
+@RequiredArgsConstructor
 public class UserDataController {
     private final UserDataService service;
-
-    public UserDataController(UserDataService service) {
-        this.service = service;
-    }
 
     @GetMapping
     public UserDataDto current() {

@@ -4,7 +4,7 @@ import org.jenaripper.config.JenaRipperProperties;
 import org.jenaripper.dto.GraphNodeDto;
 import org.jenaripper.dto.RedisRulesResponse;
 import org.jenaripper.redis.RedisPermissionReader;
-import org.jenaripper.redis.RedisRulesUnavailableException;
+import org.jenaripper.exception.RedisRulesUnavailableException;
 import org.jenaripper.service.GraphService;
 import org.jenaripper.service.PrefixService;
 import org.jenaripper.service.RedisRulesService;

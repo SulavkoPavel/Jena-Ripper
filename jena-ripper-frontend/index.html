@@ -20,15 +20,19 @@
       </div>
       <nav class="mode-tabs" aria-label="Режим приложения">
         <button id="graph-mode-button" class="mode-tab active" type="button">Graph</button>
+        <button id="metamodel-mode-button" class="mode-tab" type="button">Metamodel</button>
         <button id="sparql-mode-button" class="mode-tab" type="button">SPARQL</button>
         <button id="redis-mode-button" class="mode-tab" type="button">Redis</button>
       </nav>
       <form id="search-form" class="search">
-        <input id="search-input" type="search" autocomplete="off" placeholder="Поиск по имени, URI, UUID или классу" aria-label="Поиск RDF-ресурсов" />
+        <input id="search-input" type="search" autocomplete="off" placeholder="Поиск по имени, URI, UUID или классу" aria-label="Поиск RDF-ресурсов" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false" />
         <button type="submit">Найти</button>
-        <div id="search-results" class="search-results" hidden></div>
+        <div id="search-results" class="search-results" role="listbox" hidden></div>
       </form>
       <div class="actions">
+        <label class="header-profile"><span>Профиль</span>
+          <select id="header-profile-select" aria-label="Активный профиль подключения"></select>
+        </label>
         <span id="header-status" class="status status--pending"><i></i> Проверка Dataset</span>
         <button id="clear-button" type="button" disabled>Очистить</button>
         <button id="reset-button" type="button">Новый граф</button>
@@ -55,6 +59,11 @@
         <div id="graph" class="graph" hidden></div>
         <aside id="details" class="details" hidden></aside>
         <div id="message" class="message" role="status" hidden></div>
+      </section>
+      <section id="metamodel-mode" class="mode-screen" hidden>
+        <div id="metamodel-graph" class="graph metamodel-graph"></div>
+        <aside id="metamodel-details" class="details" hidden></aside>
+        <div id="metamodel-message" class="message" role="status" hidden></div>
       </section>
       <section id="sparql-mode" class="mode-screen sparql-console" hidden>
         <div class="sparql-workspace">
@@ -216,37 +225,75 @@
             <div class="profile-label-row"><label id="profile-heading" for="connection-profile">Профиль подключения</label></div>
             <div class="profile-controls">
               <select id="connection-profile" aria-label="Профиль подключения"></select>
-              <span id="active-profile-badge" class="active-profile-badge">● Активный</span>
+              <div class="profile-activity">
+                <span id="active-profile-badge" class="active-profile-badge">● Используется сейчас</span>
+                <button id="profile-use" class="profile-activate" type="button" hidden>Сделать активным</button>
+              </div>
             </div>
-            <div class="profile-actions">
-              <button id="profile-use" class="profile-use" type="button">Используется</button>
-              <button id="profile-create" type="button">+ Новый профиль</button>
-              <button id="profile-rename" type="button">Переименовать</button>
-              <button id="profile-delete" class="profile-delete" type="button">Удалить</button>
+            <div class="profile-action-groups">
+              <div class="profile-action-group">
+                <h3>Управление</h3>
+                <div class="profile-actions">
+                  <button id="profile-create" type="button">+ Новый</button>
+                  <button id="profile-rename" type="button">Переименовать</button>
+                  <button id="profile-delete" class="profile-delete" type="button">Удалить</button>
+                </div>
+              </div>
+              <div class="profile-action-group">
+                <h3>Импорт и экспорт</h3>
+                <div class="profile-actions">
+                  <button id="profile-import" type="button">Импортировать</button>
+                  <input id="profile-import-file" type="file" accept="application/json,.json" hidden>
+                  <button id="profile-export-selected" type="button">Скачать профиль</button>
+                  <button id="profile-export-all" type="button">Скачать все</button>
+                </div>
+              </div>
+              <div class="profile-action-group">
+                <h3>Проверка</h3>
+                <div class="profile-actions">
+                  <button id="profile-test-all" class="profile-test-all" type="button">Проверить подключения</button>
+                </div>
+              </div>
             </div>
           </section>
           <section class="settings-section" data-settings-section="jena">
             <div class="settings-section-heading"><div><h3>Источник RDF</h3><p id="jena-source-description">Локальный Apache Jena TDB2</p></div><span class="connection-state">Не проверено</span></div>
             <div class="settings-grid">
-              <label class="settings-wide">Режим подключения<select name="jenaSourceType"><option value="LOCAL_TDB2">Local TDB2</option><option value="CIM_API">CIM App API</option></select></label>
+              <label class="settings-wide">Режим подключения<select name="jenaSourceType"><option value="LOCAL_TDB2">Local TDB2</option><option value="FILE">Файл</option><option value="CIM_API">CIM App API</option></select></label>
             </div>
             <div class="settings-grid" data-source-fields="local">
-              <label class="settings-wide">Тип<select name="jenaType"><option value="TDB2">TDB2</option></select></label>
+              <input name="jenaType" type="hidden" value="TDB2">
               <label class="settings-wide">Путь к Dataset<input name="jenaPath" type="text" autocomplete="off" placeholder="C:\data\jena"></label>
             </div>
             <p class="settings-field-note" data-source-fields="local">Путь вводится вручную. Выбор папки будет доступен в desktop-версии.</p>
+            <div class="settings-grid" data-source-fields="file" hidden>
+              <label class="settings-wide">Загруженная модель<select name="uploadedModelId"><option value="">Нет загруженных моделей</option></select></label>
+              <div id="uploaded-model-info" class="uploaded-model-info settings-wide" hidden>
+                <div class="uploaded-model-file"><span>Файл</span><strong id="uploaded-model-name"></strong></div>
+                <div class="uploaded-model-meta"><span id="uploaded-model-summary"></span><small id="uploaded-model-date"></small><span id="uploaded-model-status" class="uploaded-model-status"></span></div>
+                <small id="uploaded-model-error" class="uploaded-model-error" hidden></small>
+                <div class="uploaded-model-actions">
+                  <button id="uploaded-model-use" class="uploaded-model-use" type="submit">Использовать</button>
+                  <button id="uploaded-model-rename" type="button">Переименовать</button>
+                  <button id="uploaded-model-delete" class="uploaded-model-delete" type="button">Удалить</button>
+                  <input id="uploaded-model-file" type="file" accept=".xml,.rdf,application/rdf+xml,application/xml,text/xml" hidden>
+                  <button id="uploaded-model-upload" class="uploaded-model-upload" type="button">+ Загрузить новую</button>
+                </div>
+              </div>
+              <div id="uploaded-model-delete-alert" class="uploaded-model-delete-alert settings-wide" role="alert" hidden><strong>Нельзя удалить модель</strong><p id="uploaded-model-delete-message"></p></div>
+            </div>
             <div class="settings-grid" data-source-fields="cim" hidden>
               <label class="settings-wide">Base URL<input name="cimBaseUrl" type="url" autocomplete="off" placeholder="https://cim-app.example.ru"></label>
               <label class="settings-wide">Auth URL<input name="cimAuthBaseUrl" type="url" autocomplete="off" placeholder="Оставьте пустым, если совпадает с Base URL"><span class="password-note">Для локального CIM App обычно http://localhost:8083</span></label>
               <label>Client ID<input name="cimUsername" type="text" autocomplete="username"></label>
-              <label>Client Secret<input name="cimPassword" type="password" autocomplete="new-password"><span class="password-note"></span></label>
+              <label>Client Secret<span class="password-input"><input name="cimPassword" type="password" autocomplete="new-password"><button type="button" data-toggle-password="cimPassword" aria-label="Показать пароль">◉</button></span><span class="password-note"></span></label>
               <label>Connect timeout, мс<input name="cimConnectTimeoutMs" type="number" min="100" step="100" value="5000"></label>
               <label>Read timeout, мс<input name="cimReadTimeoutMs" type="number" min="100" step="100" value="30000"></label>
               <label class="settings-wide settings-tls-option"><input name="cimTrustUntrustedCertificates" type="checkbox" checked><span><strong>Разрешить недоверенный HTTPS-сертификат</strong><small>Имя сервера всё равно проверяется.</small></span></label>
               <label class="settings-wide">Информационная модель<select name="cimModelId"><option value="">Сначала загрузите модели</option></select></label>
               <div class="settings-wide cim-model-actions"><button id="cim-load-models" class="settings-test" type="button">Загрузить модели</button></div>
             </div>
-            <div class="settings-test-row"><button class="settings-test" type="button" data-test-connection="jena">Проверить</button></div>
+            <div id="jena-test-row" class="settings-test-row"><button class="settings-test" type="button" data-test-connection="jena">Проверить</button></div>
           </section>
           <p id="cim-managed-connections" class="settings-message" hidden>PostgreSQL в режиме CIM App API не требуется. Redis настраивается ниже как отдельное прямое подключение.</p>
           <section class="settings-section" data-settings-section="postgres">
@@ -257,7 +304,7 @@
               <label>Database<input name="postgresDatabase" required autocomplete="off"></label>
               <label>Schema<input name="postgresSchema" required pattern="[A-Za-z_][A-Za-z0-9_]*" autocomplete="off"></label>
               <label>Username<input name="postgresUsername" required autocomplete="username"></label>
-              <label>Password<input name="postgresPassword" type="password" autocomplete="new-password"><small class="password-note"></small></label>
+              <label>Password<span class="password-input"><input name="postgresPassword" type="password" autocomplete="new-password"><button type="button" data-toggle-password="postgresPassword" aria-label="Показать пароль">◉</button></span><small class="password-note"></small></label>
             </div>
             <div class="settings-test-row"><button class="settings-test" type="button" data-test-connection="postgres">Проверить</button></div>
           </section>
@@ -267,7 +314,7 @@
               <label>Host<input name="redisHost" required autocomplete="off"></label>
               <label>Port<input name="redisPort" type="number" required min="1" max="65535"></label>
               <label>Database<input name="redisDatabase" type="number" required min="0"></label>
-              <label>Password<input name="redisPassword" type="password" autocomplete="new-password"><small class="password-note"></small></label>
+              <label>Password<span class="password-input"><input name="redisPassword" type="password" autocomplete="new-password"><button type="button" data-toggle-password="redisPassword" aria-label="Показать пароль">◉</button></span><small class="password-note"></small></label>
               <label>Username<input name="redisUsername" autocomplete="off"></label>
               <label>Timeout, мс<input name="redisTimeoutMs" type="number" required min="100" step="100"></label>
             </div>
@@ -285,6 +332,23 @@
         <label id="profile-copy-label" class="profile-copy"><input name="copyCurrent" type="checkbox"> Создать копию текущего профиля</label>
         <div id="profile-dialog-error" class="settings-message settings-message--error" hidden></div>
         <div class="dialog-actions"><button id="profile-dialog-cancel" type="button">Отмена</button><button id="profile-dialog-submit" type="submit">Создать</button></div>
+      </form>
+    </dialog>
+    <dialog id="profile-import-dialog" class="profile-dialog profile-import-dialog">
+      <form id="profile-import-form">
+        <h2>Импорт профилей</h2>
+        <p>Выберите действие для найденных конфликтов.</p>
+        <div id="profile-import-items" class="profile-import-items"></div>
+        <div id="profile-import-error" class="settings-message settings-message--error" hidden></div>
+        <div class="dialog-actions"><button id="profile-import-cancel" type="button">Отмена</button><button id="profile-import-apply" type="submit">Импортировать</button></div>
+      </form>
+    </dialog>
+    <dialog id="uploaded-model-rename-dialog" class="profile-dialog">
+      <form id="uploaded-model-rename-form">
+        <h2>Переименовать модель</h2>
+        <label>Название модели<input name="name" type="text" required maxlength="255" autocomplete="off"></label>
+        <div id="uploaded-model-rename-error" class="settings-message settings-message--error" hidden></div>
+        <div class="dialog-actions"><button id="uploaded-model-rename-cancel" type="button">Отмена</button><button id="uploaded-model-rename-submit" type="submit">Сохранить</button></div>
       </form>
     </dialog>
     <dialog id="shutdown-dialog" class="shutdown-dialog">

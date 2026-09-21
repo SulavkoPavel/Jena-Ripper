@@ -5,16 +5,25 @@ import { bracketMatching, defaultHighlightStyle, syntaxHighlighting, StreamLangu
 import { sparql } from '@codemirror/legacy-modes/mode/sparql';
 import { api } from './api.js';
 import { userDataRepository } from './user-data.js';
+import { RDF_SOURCE_TYPE } from './source-types.js';
+
+const DEFAULT_RESULT_LIMIT = 100;
+const BENCHMARK_WARMUP_RUNS = 1;
+const BENCHMARK_MEASURED_RUNS = 5;
+const SPARQL_HISTORY_LIMIT = 20;
+const OPERATION_STATUS_INTERVAL_MS = 100;
+const SLOW_OPERATION_SECONDS = 5;
+const VERY_SLOW_OPERATION_SECONDS = 15;
 
 const DEFAULT_QUERY = `SELECT ?s ?p ?o
 WHERE {
   ?s ?p ?o
 }
-LIMIT 100`;
+LIMIT ${DEFAULT_RESULT_LIMIT}`;
 const SYSTEM_TEMPLATES = [
   template('triples', 'Первые триплеты', 'Обзор содержимого Dataset', `SELECT ?s ?p ?o
 WHERE { ?s ?p ?o }
-LIMIT {{limit}}`, [parameter('limit', 'Лимит', 'number', 100)]),
+LIMIT {{limit}}`, [parameter('limit', 'Лимит', 'number', DEFAULT_RESULT_LIMIT)]),
   template('classes', 'Все RDF-классы', 'Уникальные классы Dataset', `SELECT DISTINCT ?class
 WHERE { ?s a ?class }
 ORDER BY ?class`, []),
@@ -24,7 +33,8 @@ GROUP BY ?class
 ORDER BY DESC(?count)`, []),
   template('class-resources', 'Объекты класса', 'Ресурсы выбранного RDF-класса', `SELECT ?s
 WHERE { ?s a {{class}} }
-LIMIT {{limit}}`, [parameter('class', 'Класс', 'prefixed-uri', 'cim:Substation'), parameter('limit', 'Лимит', 'number', 100)]),
+LIMIT {{limit}}`, [parameter('class', 'Класс', 'prefixed-uri', 'cim:Substation'),
+    parameter('limit', 'Лимит', 'number', DEFAULT_RESULT_LIMIT)]),
   template('properties', 'Свойства resource', 'Исходящие свойства ресурса', `SELECT ?p ?o
 WHERE { {{resource}} ?p ?o }`, [parameter('resource', 'Resource', 'prefixed-uri', 'ups:_...')]),
   template('incoming', 'Входящие связи', 'Ресурсы, которые ссылаются на выбранный', `SELECT ?s ?p
@@ -168,7 +178,8 @@ export function initSparqlConsole({ openResource, showGraph }) {
   }
 
   async function benchmark() {
-    if (running || !window.confirm('Запустить 1 прогрев и 5 измерений? Запрос выполнится 6 раз.')) return;
+    const totalRuns = BENCHMARK_WARMUP_RUNS + BENCHMARK_MEASURED_RUNS;
+    if (running || !window.confirm(`Запустить ${BENCHMARK_WARMUP_RUNS} прогрев и ${BENCHMARK_MEASURED_RUNS} измерений? Запрос выполнится ${totalRuns} раз.`)) return;
     const query = await prepareQuery(editor.state.doc.toString().trim());
     if (!query) return;
     document.querySelector('#sparql-more').open = false;
@@ -176,7 +187,8 @@ export function initSparqlConsole({ openResource, showGraph }) {
     errorElement.hidden = true;
     try {
       const useOwnerRules = document.querySelector('#sparql-owner-rules').checked;
-      const response = await api.benchmark(query, 1, 5, useOwnerRules);
+      const response = await api.benchmark(query, BENCHMARK_WARMUP_RUNS,
+        BENCHMARK_MEASURED_RUNS, useOwnerRules);
       renderBenchmark(response);
       metaElement.textContent = `Benchmark · Owner Rules: ${useOwnerRules ? 'включены' : 'выключены'}`;
       showResultTab('analysis');
@@ -220,10 +232,12 @@ export function initSparqlConsole({ openResource, showGraph }) {
     const update = () => {
       const seconds = (performance.now() - runningStartedAt) / 1000;
       runButton.innerHTML = `<span class="button-spinner" aria-hidden="true"></span> Выполняется… ${seconds.toFixed(1)} с`;
-      hint.textContent = seconds >= 15 ? 'Запрос выполняется дольше обычного.' : seconds >= 5 ? 'Запрос всё ещё выполняется…' : '';
+      hint.textContent = seconds >= VERY_SLOW_OPERATION_SECONDS
+        ? 'Запрос выполняется дольше обычного.'
+        : seconds >= SLOW_OPERATION_SECONDS ? 'Запрос всё ещё выполняется…' : '';
     };
     update();
-    runningTimer = window.setInterval(update, 100);
+    runningTimer = window.setInterval(update, OPERATION_STATUS_INTERVAL_MS);
   }
 
   function renderResult(response) {
@@ -263,7 +277,9 @@ export function initSparqlConsole({ openResource, showGraph }) {
       ? analysis.recommendations.map(item => recommendationHtml(item)).join('')
       : '<div class="recommendation info"><strong>INFO · Явных рисков не найдено</strong><p>Статический анализ не обнаружил правил, требующих внимания.</p></div>';
     analysisElement.innerHTML = `<div class="analysis-scroll"><h3>Фактические метрики</h3>${metricsHtml}<h3>Структура запроса</h3>${structure}<h3>Query Doctor</h3><div class="recommendations">${recommendations}</div><div id="sparql-benchmark-result"></div></div>`;
-    analysisElement.querySelector('[data-add-limit]')?.addEventListener('click', () => { setQuery(`${editor.state.doc.toString().trim()}\nLIMIT 100`); });
+    analysisElement.querySelector('[data-add-limit]')?.addEventListener('click', () => {
+      setQuery(`${editor.state.doc.toString().trim()}\nLIMIT ${DEFAULT_RESULT_LIMIT}`);
+    });
   }
 
   function renderAlgebra(algebra) {
@@ -281,7 +297,8 @@ export function initSparqlConsole({ openResource, showGraph }) {
       MISSING_LIMIT: ['Нет LIMIT', 'Запрос потенциально может вернуть большое количество результатов.'], SELECT_STAR: ['Используется SELECT *', 'Явное перечисление переменных делает результат понятнее и может уменьшить объём передачи.'], DISTINCT: ['DISTINCT', 'Удаление дубликатов является отдельной операцией.'], ORDER_BY: ['ORDER BY', 'Сортировка большого результата может потребовать дополнительное время и память.'], AGGREGATION: ['Группировка и агрегаты', 'Запрос использует GROUP BY или агрегатную функцию.'], REGEX_FILTER: ['REGEX в FILTER', 'REGEX может быть дорогой операцией на больших промежуточных наборах.'], MANY_OPTIONALS: ['Несколько OPTIONAL', `Обнаружено OPTIONAL-блоков: ${item.data?.count || 0}.`], MANY_UNIONS: ['Несколько UNION-ветвей', `Обнаружено альтернативных ветвей: ${item.data?.count || 0}.`], RECURSIVE_PROPERTY_PATH: ['Рекурсивный property path', 'Путь * или + может обходить большое количество RDF resources.'], CARTESIAN_PRODUCT: ['Возможное декартово произведение', 'Обнаружены независимые группы triple patterns. Это может резко увеличить промежуточный результат.']
     };
     const [title, body] = messages[item.code] || [item.code, ''];
-    const action = item.code === 'MISSING_LIMIT' ? '<button type="button" data-add-limit>Добавить LIMIT 100</button>' : '';
+    const action = item.code === 'MISSING_LIMIT'
+      ? `<button type="button" data-add-limit>Добавить LIMIT ${DEFAULT_RESULT_LIMIT}</button>` : '';
     return `<div class="recommendation ${item.severity.toLowerCase()}"><strong>${item.severity} · ${title}</strong><p>${body}</p>${action}</div>`;
   }
 
@@ -393,7 +410,7 @@ export function initSparqlConsole({ openResource, showGraph }) {
     const items = loadHistory();
     items.unshift({ query, type: response.type, useOwnerRules: document.querySelector('#sparql-owner-rules').checked,
       time: new Date().toISOString(), metrics: response.metrics, analysis: response.analysis, algebra: response.algebra });
-    await saveHistory(items.slice(0, 20)); renderHistory();
+    await saveHistory(items.slice(0, SPARQL_HISTORY_LIMIT)); renderHistory();
   }
 
   async function prepareQuery(source) {
@@ -470,7 +487,7 @@ export function initSparqlConsole({ openResource, showGraph }) {
       const option = document.querySelector('#sparql-owner-rules-option');
       option.hidden = features?.sparqlOwnerRules !== true;
       if (option.hidden) document.querySelector('#sparql-owner-rules').checked = false;
-      const remote = features?.sourceType === 'CIM_API';
+      const remote = features?.sourceType === RDF_SOURCE_TYPE.CIM_API;
       document.querySelector('.sparql-panel-heading p').textContent = remote
         ? 'Запросы выполняются через выбранную модель CIM App API.'
         : 'Запросы выполняются к текущему Apache Jena Dataset.';
@@ -482,7 +499,7 @@ export function initSparqlConsole({ openResource, showGraph }) {
 
 function template(id, name, description, query, parameters) { return { id, name, description, category: 'Системные', query, parameters, system: true }; }
 function parameter(name, label, type, defaultValue) { return { name, label, type, defaultValue, required: true }; }
-function inferParameters(query) { return [...query.matchAll(/\{\{([a-zA-Z][\w-]*)}}/g)].map(match => { const name = match[1]; const types = { limit: 'number', class: 'prefixed-uri', resource: 'prefixed-uri', name: 'text' }; return parameter(name, ({ limit: 'Лимит', class: 'Класс', resource: 'Resource', name: 'Название' })[name] || name, types[name] || 'text', name === 'limit' ? 100 : ''); }); }
+function inferParameters(query) { return [...query.matchAll(/\{\{([a-zA-Z][\w-]*)}}/g)].map(match => { const name = match[1]; const types = { limit: 'number', class: 'prefixed-uri', resource: 'prefixed-uri', name: 'text' }; return parameter(name, ({ limit: 'Лимит', class: 'Класс', resource: 'Resource', name: 'Название' })[name] || name, types[name] || 'text', name === 'limit' ? DEFAULT_RESULT_LIMIT : ''); }); }
 function applyParameters(query, parameters, values, prefixes) { let result = query; for (const parameter of parameters) { const value = String(values[parameter.name] ?? '').trim(); if (parameter.required && !value) throw new Error(`Заполните параметр «${parameter.label}».`); const encoded = encodeParameter(value, parameter.type, prefixes); result = result.replaceAll(`{{${parameter.name}}}`, encoded); } if (/\{\{[^}]+}}/.test(result)) throw new Error('Не все параметры шаблона заполнены.'); return result; }
 function encodeParameter(value, type, prefixes) { if (type === 'number') { if (!/^-?(?:\d+|\d*\.\d+)$/.test(value) || !Number.isFinite(Number(value))) throw new Error('Ожидалось корректное число.'); return value; } if (type === 'text') return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`; if (value.startsWith('<') && value.endsWith('>')) { validateAbsoluteUri(value.slice(1, -1)); return value; } if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) { validateAbsoluteUri(value); return `<${value}>`; } const match = /^([A-Za-z][\w-]*):([^\s<>"{}|^`\\]+)$/.exec(value); if (!match || !prefixes[match[1]]) throw new Error('Ожидался известный compact URI или абсолютный URI.'); return value; }
 function validateAbsoluteUri(value) { try { const uri = new URL(value); if (!uri.protocol || /[<>"{}|^`\\\s]/.test(value)) throw new Error(); } catch { throw new Error('Некорректный абсолютный URI.'); } }

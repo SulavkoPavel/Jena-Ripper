@@ -1,5 +1,6 @@
 package org.jenaripper.owner;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.reasoner.rulesys.Rule;
 import org.jenaripper.service.PrefixService;
 import org.springframework.core.io.ClassPathResource;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@RequiredArgsConstructor
 public class OwnerRuleGenerator {
     private static final Set<String> ASSOCIATION_DATA_TYPES = Set.of("OBJECT_ENUM", "MULTI_OBJECT_ENUM");
     private static final String EQUIPMENTS = "cim:EquipmentContainer.Equipments";
@@ -22,11 +24,6 @@ public class OwnerRuleGenerator {
     private final OwnerMetadataSource metadataSource;
     private final PrefixService prefixService;
     private volatile OwnerRuleBundle cached;
-
-    public OwnerRuleGenerator(OwnerMetadataSource metadataSource, PrefixService prefixService) {
-        this.metadataSource = metadataSource;
-        this.prefixService = prefixService;
-    }
 
     public OwnerRuleBundle rules() {
         OwnerRuleBundle result = cached;

@@ -1,5 +1,6 @@
 package org.jenaripper.controller;
 
+import lombok.RequiredArgsConstructor;
 import org.jenaripper.dto.RedisCommandRequest;
 import org.jenaripper.dto.RedisCommandResponse;
 import org.jenaripper.dto.RedisConsoleMetadataDto;
@@ -14,12 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/redis")
+@RequiredArgsConstructor
 public class RedisConsoleController {
     private final RedisCommandService service;
-
-    public RedisConsoleController(RedisCommandService service) {
-        this.service = service;
-    }
 
     @GetMapping("/metadata")
     public RedisConsoleMetadataDto metadata() { return service.metadata(); }

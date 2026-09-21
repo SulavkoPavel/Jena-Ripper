@@ -14,7 +14,7 @@ import org.jenaripper.owner.OwnerMetadataSource;
 import org.jenaripper.owner.OwnerRuleGenerator;
 import org.jenaripper.owner.OwnerRulesResolver;
 import org.jenaripper.owner.OwnerRulesModelReasoner;
-import org.jenaripper.owner.OwnerRulesUnavailableException;
+import org.jenaripper.exception.OwnerRulesUnavailableException;
 import org.jenaripper.owner.OwnerResolution;
 import org.jenaripper.service.GraphMapper;
 import org.jenaripper.service.PrefixService;
@@ -118,7 +118,8 @@ class OwnerRulesResolverTest {
                 new JenaRipperProperties.Labels(List.of(RDFS.label.getURI())),
                 new JenaRipperProperties.Api(List.of(), 25),
                 new JenaRipperProperties.Sparql(Duration.ofSeconds(5), 100, 100, List.of()),
-                new JenaRipperProperties.OwnerRules(true, "jdbc:unused", "", "", "public", Duration.ofSeconds(1)),
+                new JenaRipperProperties.OwnerRules(
+                        true, "jdbc:unused", "", "", "public", Duration.ofSeconds(1), 4),
                 null,
                 null);
         return new OwnerRulesResolver(new OwnerRuleGenerator(metadata, prefixes), prefixes, new GraphMapper(prefixes, properties));

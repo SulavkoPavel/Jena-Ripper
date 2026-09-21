@@ -7,12 +7,12 @@ import org.jenaripper.dto.RedisCommandResponse;
 import org.jenaripper.dto.RedisConsoleMetadataDto;
 import org.jenaripper.dto.RedisKeyRequest;
 import org.jenaripper.dto.RedisKeyResponse;
-import org.jenaripper.redis.RedisCommandException;
+import org.jenaripper.exception.RedisCommandException;
 import org.jenaripper.redis.RedisCommandExecutor;
 import org.jenaripper.redis.RedisCommandRegistry;
 import org.jenaripper.redis.RedisPermissionKeyFactory;
 import org.jenaripper.remote.CimApiClient;
-import org.jenaripper.remote.CimApiException;
+import org.jenaripper.exception.CimApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -73,7 +73,9 @@ public class RedisCommandService {
                 new RedisConsoleMetadataDto.Template("write", "WRITE объекта", "Показать WRITE rules для resource.", "SMEMBERS {{writeKey}}"),
                 new RedisConsoleMetadataDto.Template("owner", "Проверить owner", "Проверить owner в permission SET.", "SISMEMBER {{key}} {{owner}}"),
                 new RedisConsoleMetadataDto.Template("size", "Размер permission set", "Показать число owners.", "SCARD {{key}}"),
-                new RedisConsoleMetadataDto.Template("scan", "Найти keys Dataset", "Обойти keys Dataset без KEYS.", "SCAN 0 MATCH {{datasetId}}/* COUNT 100")
+                new RedisConsoleMetadataDto.Template("scan", "Найти keys Dataset",
+                        "Обойти keys Dataset без KEYS.",
+                        "SCAN 0 MATCH {{datasetId}}/* COUNT " + RedisCommandRegistry.DEFAULT_SCAN_COUNT)
         ));
     }
 

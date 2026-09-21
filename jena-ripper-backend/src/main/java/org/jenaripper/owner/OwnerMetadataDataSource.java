@@ -11,6 +11,8 @@ import java.sql.SQLException;
 
 @Component
 public class OwnerMetadataDataSource {
+    private static final long MINIMUM_TIMEOUT_MS = 1_000;
+
     private final HikariDataSource dataSource;
 
     public OwnerMetadataDataSource(JenaRipperProperties properties) {
@@ -24,11 +26,11 @@ public class OwnerMetadataDataSource {
         config.setJdbcUrl(owner.jdbcUrl());
         config.setUsername(owner.username());
         config.setPassword(owner.password());
-        config.setMaximumPoolSize(4);
+        config.setMaximumPoolSize(Math.max(1, owner.poolSize()));
         config.setMinimumIdle(0);
         config.setReadOnly(true);
-        config.setConnectionTimeout(Math.max(1_000, owner.connectTimeout().toMillis()));
-        config.setValidationTimeout(Math.max(1_000, owner.connectTimeout().toMillis()));
+        config.setConnectionTimeout(Math.max(MINIMUM_TIMEOUT_MS, owner.connectTimeout().toMillis()));
+        config.setValidationTimeout(Math.max(MINIMUM_TIMEOUT_MS, owner.connectTimeout().toMillis()));
         config.setInitializationFailTimeout(-1);
         dataSource = new HikariDataSource(config);
     }

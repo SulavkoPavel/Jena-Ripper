@@ -1,5 +1,6 @@
 package org.jenaripper.owner;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.InfModel;
 import org.apache.jena.rdf.model.Model;
@@ -35,26 +36,11 @@ import java.util.Set;
 import java.util.Iterator;
 
 @Component
+@RequiredArgsConstructor
 public class OwnerRulesResolver {
-    private static final String SO = "http://so-ups.ru/2015/schema-cim16#";
-    private static final Set<String> ASSET_OWNER_PREDICATES = Set.of(
-            SO + "Object.OwnersToBottom", SO + "Object.OwnersToTop");
-    private static final Set<String> DATA_SOURCE_PREDICATES = Set.of(
-            SO + "Object.DataSourceToBottom", SO + "Object.DataSourceToTop");
-    private static final Set<String> INFERRED_PREDICATES = Set.of(
-            SO + "Object.OwnersToBottom", SO + "Object.OwnersToTop",
-            SO + "Object.DataSourceToBottom", SO + "Object.DataSourceToTop",
-            SO + "HasDirectAssetOwner", SO + "HasNotDirectAssetOwner", SO + "HasDirectAssetDataSource");
-
     private final OwnerRuleGenerator ruleGenerator;
     private final PrefixService prefixService;
     private final GraphMapper graphMapper;
-
-    public OwnerRulesResolver(OwnerRuleGenerator ruleGenerator, PrefixService prefixService, GraphMapper graphMapper) {
-        this.ruleGenerator = ruleGenerator;
-        this.prefixService = prefixService;
-        this.graphMapper = graphMapper;
-    }
 
     public OwnerResolution resolve(Model data, String uri) {
         OwnerRuleBundle rules = ruleGenerator.rules();
@@ -66,8 +52,10 @@ public class OwnerRulesResolver {
         ownerModel.setDerivationLogging(true);
         ownerModel.prepare();
             Resource selected = ownerModel.createResource(uri);
-        RoleResolution assetOwners = collectRole(selected, ASSET_OWNER_PREDICATES, ownerModel, directModel, data, uri);
-        RoleResolution dataSources = collectRole(selected, DATA_SOURCE_PREDICATES, ownerModel, directModel, data, uri);
+        RoleResolution assetOwners = collectRole(selected, OwnerRuleVocabulary.ASSET_OWNER_PREDICATES,
+                ownerModel, directModel, data, uri);
+        RoleResolution dataSources = collectRole(selected, OwnerRuleVocabulary.DATA_SOURCE_PREDICATES,
+                ownerModel, directModel, data, uri);
         List<OwnerResourceDto> resources = java.util.stream.Stream.concat(
                         assetOwners.resources().stream(), dataSources.resources().stream())
                 .collect(java.util.stream.Collectors.toMap(OwnerResourceDto::uri, value -> value,
@@ -120,7 +108,8 @@ public class OwnerRulesResolver {
         for (Triple triple : matches) {
             if (!triple.getSubject().isURI() || !triple.getObject().isURI()) continue;
             String predicate = triple.getPredicate().getURI();
-            if (RDF.type.getURI().equals(predicate) || INFERRED_PREDICATES.contains(predicate)) continue;
+            if (RDF.type.getURI().equals(predicate)
+                    || OwnerRuleVocabulary.INFERRED_PREDICATES.contains(predicate)) continue;
             PathEdge edge = new PathEdge(triple.getSubject().getURI(), predicate, triple.getObject().getURI());
             adjacency.computeIfAbsent(edge.subject(), ignored -> new ArrayList<>()).add(edge);
             adjacency.computeIfAbsent(edge.object(), ignored -> new ArrayList<>()).add(edge);

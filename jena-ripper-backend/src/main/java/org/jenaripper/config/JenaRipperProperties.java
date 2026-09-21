@@ -12,7 +12,8 @@ public record JenaRipperProperties(Dataset dataset, Graph graph, Labels labels, 
     public record Labels(List<String> predicates) {}
     public record Api(List<String> allowedOrigins, int searchLimit) {}
     public record Sparql(Duration timeout, int maxSelectRows, int maxGraphTriples, List<Long> speedThresholdsMs) {}
-    public record OwnerRules(boolean enabled, String jdbcUrl, String username, String password, String schema, Duration connectTimeout) {}
+    public record OwnerRules(boolean enabled, String jdbcUrl, String username, String password, String schema,
+                             Duration connectTimeout, int poolSize) {}
     public record RedisRules(
             boolean enabled,
             String host,
